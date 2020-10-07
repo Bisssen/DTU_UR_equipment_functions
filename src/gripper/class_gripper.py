@@ -1,11 +1,16 @@
 import time
+import sys
 
-import gripper_config
-from gripper_communication import GripperSerial
+import config_gripper
+from communication_gripper import GripperSerial
 
 
 class Gripper:
     def __init__(self):
+        # Checking python version
+        self.python_2 = (sys.version_info.major == 2)
+
+        # Getting gripper connection class
         self.gripper_serial = GripperSerial()
 
         # Activating gripper

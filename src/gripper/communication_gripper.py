@@ -2,12 +2,16 @@ import serial
 import time
 import serial.tools.list_ports
 import binascii
+import sys
 
-import gripper_config
+import config_gripper
 
 
 class GripperSerial():
     def __init__(self):
+        # Checking python version
+        self.python_2 = (sys.version_info.major == 2)
+
         # Determining port used for gripper connection
         ports = list(serial.tools.list_ports.comports())
         ports = ('/dev/ttyUSB0', 'Custom written port')
@@ -15,42 +19,55 @@ class GripperSerial():
         print('    Equipment found on port ' + port)
 
         # Setting up serial connection for communication
-        self.ser = serial.Serial(port=port, baudrate=115200, timeout=1,
-                                 parity=serial.PARITY_NONE,
-                                 stopbits=serial.STOPBITS_ONE,
-                                 bytesize=serial.EIGHTBITS)
+        self.serial = serial.Serial(port=port, baudrate=115200, timeout=1,
+                                    parity=serial.PARITY_NONE,
+                                    stopbits=serial.STOPBITS_ONE,
+                                    bytesize=serial.EIGHTBITS)
 
     def shutdown(self):
-        self.ser.close()
+        self.serial.close()
 
     def activate(self):
         # Sending activation codes and checking received bytes
-        self.ser.write('\x09\x10\x03\xE8\x00\x03\x06\x00\x00\x00\x00\x00\x00\x73\x30')
-        response = self.read_bytes(8)
-        self.ser.write('\x09\x10\x03\xE8\x00\x03\x06\x01\x00\x00\x00\x00\x00\x72\xE1')
-        response = self.read_bytes(8)
+        if self.python_2:
+            self.serial.write('\x09\x10\x03\xE8\x00\x03\x06\x00\x00\x00\x00\x00\x00\x73\x30')
+            response = self.read_bytes(8)
+            self.serial.write('\x09\x10\x03\xE8\x00\x03\x06\x01\x00\x00\x00\x00\x00\x72\xE1')
+            response = self.read_bytes(8)
+        else:
+            self.ser.write(b'\x09\x10\x03\xE8\x00\x03\x06\x00\x00\x00\x00\x00\x00\x73\x30')
+            response = self.readBytes(8)
+            self.ser.write(b'\x09\x10\x03\xE8\x00\x03\x06\x01\x00\x00\x00\x00\x00\x72\xE1')
+            response = self.readBytes(8)
 
-        act_timeout = 10
         start_time = time.time()
         success = False
         while True:
-            self.ser.write('\x09\x03\x07\xD0\x00\x01\x85\xCF')
+            if self.python_2:
+                self.serial.write('\x09\x03\x07\xD0\x00\x01\x85\xCF')
+            else:
+                self.ser.write(b'\x09\x03\x07\xD0\x00\x01\x85\xCF')
             response = self.read_bytes(7)
             if response == '09030231004C15':
                 success = True
                 break
-            if time.time() > (start_time + act_timeout):
+            if time.time() > (start_time + config_gripper.ACTIVATION_TIMEOUT):
                 break
         return success
 
     def read(self):
-        cmd = add_CRC('\x09\x03\x07\xD0\x00\x03')
-        self.ser.write(cmd)
+        if self.python_2:
+            cmd = add_CRC('\x09\x03\x07\xD0\x00\x03')
+        else:
+            cmd = addCRC(b'\x09\x03\x07\xD0\x00\x03')
+        self.serial.write(cmd)
         response = self.read_bytes(11)
-        reg07D0 = response[6:10]
-        reg07D1 = response[10:14]
-        reg07D2 = response[14:18]
-        response_str = '{};{};{}'.format(reg07D0, reg07D1, reg07D2)
+        register_07D0 = response[6:10]
+        register_07D1 = response[10:14]
+        register_07D2 = response[14:18]
+        response_str = '{};{};{}'.format(register_07D0,
+                                         register_07D1,
+                                         register_07D2)
         return response_str
 
     def set(self, command):
@@ -58,13 +75,20 @@ class GripperSerial():
         response = self.read_bytes(8)
 
     def set_gripper(self, pos, speed, force):
-        cmd_init = '\x09\x10\x03\xE8\x00\x03\x06\x09\x00\x00' +\
-                   chr(pos) + chr(speed) + chr(force)
+        if self.python_2:
+            cmd_init = '\x09\x10\x03\xE8\x00\x03\x06\x09\x00\x00' +\
+                       chr(pos) + chr(speed) + chr(force)
+        else:
+            cmd_init = b'\x09\x10\x03\xE8\x00\x03\x06\x09\x00\x00' +\
+                       bytes([pos]) + bytes([speed]) + bytes([force])
         cmd = add_CRC(cmd_init)
-        self.ser.write(cmd)
+        self.serial.write(cmd)
 
     def read_bytes(self, num_bytes):
-        return self.ser.read(num_bytes).encode('hex').upper()
+        if self.python_2:
+            return self.serial.read(num_bytes).encode('hex').upper()
+        else:
+            return self.serial.read(num_bytes).hex().upper()
 
 
 def calculate_CRC(st):

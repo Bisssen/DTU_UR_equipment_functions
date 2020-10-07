@@ -32,24 +32,15 @@ class GripperSerial():
 
     def activate(self):
         # Sending activation codes and checking received bytes
-        if self.python_2:
-            self.serial.write('\x09\x10\x03\xE8\x00\x03\x06\x00\x00\x00\x00\x00\x00\x73\x30')
-            response = self.read_bytes(8)
-            self.serial.write('\x09\x10\x03\xE8\x00\x03\x06\x01\x00\x00\x00\x00\x00\x72\xE1')
-            response = self.read_bytes(8)
-        else:
-            self.serial.write(b'\x09\x10\x03\xE8\x00\x03\x06\x00\x00\x00\x00\x00\x00\x73\x30')
-            response = self.read_bytes(8)
-            self.serial.write(b'\x09\x10\x03\xE8\x00\x03\x06\x01\x00\x00\x00\x00\x00\x72\xE1')
-            response = self.read_bytes(8)
+        self.serial.write(b'\x09\x10\x03\xE8\x00\x03\x06\x00\x00\x00\x00\x00\x00\x73\x30')
+        response = self.read_bytes(8)
+        self.serial.write(b'\x09\x10\x03\xE8\x00\x03\x06\x01\x00\x00\x00\x00\x00\x72\xE1')
+        response = self.read_bytes(8)
 
         start_time = time.time()
         success = False
         while True:
-            if self.python_2:
-                self.serial.write('\x09\x03\x07\xD0\x00\x01\x85\xCF')
-            else:
-                self.serial.write(b'\x09\x03\x07\xD0\x00\x01\x85\xCF')
+            self.serial.write(b'\x09\x03\x07\xD0\x00\x01\x85\xCF')
             response = self.read_bytes(7)
             if response == '09030231004C15':
                 success = True
@@ -59,10 +50,7 @@ class GripperSerial():
         return success
 
     def read(self):
-        if self.python_2:
-            cmd = self.add_CRC('\x09\x03\x07\xD0\x00\x03')
-        else:
-            cmd = self.add_CRC(b'\x09\x03\x07\xD0\x00\x03')
+        cmd = self.add_CRC(b'\x09\x03\x07\xD0\x00\x03')
         self.serial.write(cmd)
         response = self.read_bytes(11)
         register_07D0 = response[6:10]

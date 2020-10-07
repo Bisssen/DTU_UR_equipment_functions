@@ -6,7 +6,10 @@ from . import config_robot as cfg
 
 class communication_thread():
     def __init__(self):
-        ########################## OPENING SOCKET TO ####################################
+        # Whether the program is run in python 2 or not 
+        self.python_2 = (sys.version_info.major == 2)
+
+        # Creating the socket
         self.socket_robot = socket.socket(socket.AF_INET,
                                           socket.SOCK_STREAM)
         self.socket_robot.connect((cfg.SOCKETS['host ip'],
@@ -61,3 +64,4 @@ def transform_data(data):
         data_point = transform_data_point(data, data_type)
         data_string += data_type + ':' + str(data_point) + ';'
     return data_string
+

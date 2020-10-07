@@ -103,6 +103,8 @@ def calculateCRC(st):
     crc = 0xFFFF
 
     for ch in st:
+        if self.parity
+        
         crc = (crc >> 8) ^ table[(crc ^ ch) & 0xFF]
     
     crc = str(hex(crc))

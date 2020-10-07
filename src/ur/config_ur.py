@@ -3,7 +3,7 @@ from math import pi
 CONTROLLER_VERSION = 1.8
 VELOCITY_MEAN_THRESHOLD = 0.001
 
-IP = '192.38.66.226'
+IP = '192.38.66.254'
 PORT = 30003
 
 DATA_MAP = {'message_size': 0, 'time': 4,

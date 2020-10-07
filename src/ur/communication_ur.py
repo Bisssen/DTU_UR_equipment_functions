@@ -33,37 +33,36 @@ class communication_thread():
     def receive(self):
         while self.running:
             data = (self.socket_robot.recv(2048))
-            self.data = transform_data(data)
+            self.data = self.transform_data(data)
 
     def shutdown(self):
         self.running = False
         self.receive_thread.join()
         self.socket_robot.close()
 
+    def transform_data_point(self, data, data_type):
+        num = config_ur.DATA_MAP[data_type]
+        data = data[num:num+8]
 
-def transform_data_point(data, data_type):
-    num = config_ur.DATA_MAP[data_type]
-    data = data[num:num+8]
-
-    # Convert the data from \x hex notation to plain hex
-    if self.python_2:
-        data = data.encode("hex")
-    else:
-        data = data.hex()
-
-    if len(data) == 16:
+        # Convert the data from \x hex notation to plain hex
         if self.python_2:
-            data = struct.unpack('!d', data.decode("hex"))[0]
+            data = data.encode("hex")
         else:
-            data = struct.unpack('!d', bytes.fromhex(data))[0]
-        return data
-    else:
-        return 0
+            data = data.hex()
+
+        if len(data) == 16:
+            if self.python_2:
+                data = struct.unpack('!d', data.decode("hex"))[0]
+            else:
+                data = struct.unpack('!d', bytes.fromhex(data))[0]
+            return data
+        else:
+            return 0
 
 
-def transform_data(data):
-    data_string = ''
-    for data_type in config_ur.DATA_MAP:
-        data_point = transform_data_point(data, data_type)
-        data_string += data_type + ':' + str(data_point) + ';'
-    return data_string
+    def transform_data(self, data):
+        data_string = ''
+        for data_type in config_ur.DATA_MAP:
+            data_point = self.transform_data_point(data, data_type)
+            data_string += data_type + ':' + str(data_point) + ';'
+        return data_string

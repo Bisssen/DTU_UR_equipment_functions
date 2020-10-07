@@ -1,8 +1,8 @@
 import time
 import sys
 
-import config_gripper
-from communication_gripper import GripperSerial
+from . import config_gripper
+from .communication_gripper import GripperSerial
 
 
 class Gripper:
@@ -45,7 +45,7 @@ class Gripper:
         gACT = int(status[7], 2)
         return gOBJ, gSTA, gGTO, gACT
 
-    def set(self, pos, speed=255, force=255):
+    def set(self, pos, speed=255, force=255, wait=False):
         if (0 <= pos <= 255) & (0 <= speed <= 255) & (0 <= force <= 255):
             self.gripper_serial.set(('{:d};{:d};{:d}'.format(int(pos),
                                                              int(speed),
@@ -58,17 +58,24 @@ class Gripper:
             if not 0 <= force <= 255:
                 print('Gripper force not allowed.')
 
+        if wait:
+            self.wait()
+
     def wait(self):
         while True:
             gOBJ, _, _, _ = self.get_status()
             if gOBJ != 0:
                 break
 
-    def close(self, speed=255, force=255):
+    def close(self, speed=255, force=255, wait=False):
         self.set(pos=255, speed=speed, force=force)
+        if wait:
+            self.wait()
 
-    def open(self, speed=255, force=255):
+    def open(self, speed=255, force=255, wait=False):
         self.set(pos=0, speed=speed, force=force)
+        if wait:
+            self.wait()
 
     def shutdown(self):
         self.gripper_serial.shutdown()

@@ -8,13 +8,19 @@ from . import config_gripper
 
 
 class GripperSerial():
-    def __init__(self):
+    def __init__(self, usb_port):
         # Checking python version
         self.python_2 = (sys.version_info.major == 2)
 
+        # If no USB port is provided, then use default
+        if usb_port is None:
+            self.usb_port = config_gripper.USB_PORT
+        else:
+            self.usb_port = usb_port
+
         # Determining port used for gripper connection
-        if config_gripper.USB_PORT:
-            port = config_gripper.USB_PORT
+        if self.usb_port is not None:
+            port = self.usb_port
         else:
             ports = list(serial.tools.list_ports.comports())
             port = ports[0].device

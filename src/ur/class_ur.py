@@ -9,7 +9,7 @@ from .communication_ur import communication_thread
 
 
 class UR:
-    def __init__(self):
+    def __init__(self, ip=None, port=None):
         # Whether the program is run in python 2 or not
         self.python_2 = (sys.version_info.major == 2)
 
@@ -34,13 +34,25 @@ class UR:
         self.ur_data = {}
 
         # Connecting socket directly to robot
-        self.socket_ur_send = socket.socket(socket.AF_INET,
-                                            socket.SOCK_STREAM)
-        self.socket_ur_send.connect((config_ur.IP,
-                                     config_ur.PORT))
+        self.socket = socket.socket(socket.AF_INET,
+                                    socket.SOCK_STREAM)
+        
+        # If no ip is provided, then use default
+        if ip is None:
+            self.ip = config_ur.IP
+        else:
+            self.ip = ip
 
+        # If no port is provided, then use default
+        if port is None:
+            self.port = config_ur.PORT
+        else:
+            self.port = port
+
+        # Connect to the UR arm
+        self.socket.connect((self.ip, self.port))
         # Starting communication script
-        self.communication_thread = communication_thread()
+        self.communication_thread = communication_thread(self.ip, self.port)
 
     def transform_init(self, p0i, pxi, pyi):
         p0 = np.array(p0i)
@@ -69,14 +81,16 @@ class UR:
         return it
 
     def set_tcp(self, x=0, y=0, z=0, rx=0, ry=0, rz=0):
-        self.socket_ur_send.send(('set_tcp(p[' + str(x) + ',' + str(y) +
+        self.socket.send(('set_tcp(p[' + str(x) + ',' + str(y) +
                                   ',' + str(z) + ',' + str(rx) + ',' +
                                   str(ry) + ',' + str(rz) + '])\n').encode())
         time.sleep(0.1)
 
     def get_position(self, world=True):
         self.read()
-        if config_ur.CONTROLLER_VERSION >= 3.0:
+        # The older version have the position values in a different spot
+        if (self.communication_thread.message_size >=
+                config_ur.MESSAGE_SIZE_TO_VERSION['3.0']):
             x = self.ur_data['x_actual']
             y = self.ur_data['y_actual']
             z = self.ur_data['z_actual']
@@ -90,18 +104,22 @@ class UR:
             return (x, y, z)
 
     def move(self, x, y, z, rx=pi, ry=0, rz=0, acc=1, speed=0.1,
-             transform=True):
+             transform=True, wait=False):
         if transform:
             x, y, z = self.transform(x, y, z)
-        self.socket_ur_send.send(('movel(p[' + str(x) + ',' + str(y) +
+        self.socket.send(('movel(p[' + str(x) + ',' + str(y) +
                                   ',' + str(z) + ',' + str(rx) + ',' +
                                   str(ry) + ',' + str(rz) + '],' + str(acc) +
                                   ',' + str(speed) + ')\n').encode())
-        self.wait()
+        if wait:
+            self.wait()
 
-    def move_relative(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, acc=1, speed=0.1):
+    def move_relative(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, acc=1, speed=0.1,
+                      wait=False):
         x_current, y_current, z_current = self.get_position(world=False)
-        if config_ur.CONTROLLER_VERSION >= 3.0:
+        # The older version have the position values in a different spot
+        if (self.communication_thread.message_size >=
+                config_ur.MESSAGE_SIZE_TO_VERSION['3.0']):
             rx_current = self.ur_data['rx_actual']
             ry_current = self.ur_data['ry_actual']
             rz_current = self.ur_data['rz_actual']
@@ -112,24 +130,26 @@ class UR:
 
         self.move(x_current + x, y_current + y, z_current + z,
                   rx_current + rx, ry_current + ry, rz_current + rz,
-                  acc, speed, transform=False)
+                  acc, speed, transform=False, wait=wait)
 
-    def move_tool(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, acc=1, speed=0.1):
+    def move_tool(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, acc=1, speed=0.1,
+                  wait=False):
         send_string = 'movel(pose_trans(get_forward_kin(),' +\
                       'p[' + str(x) + ',' + str(y) + ',' + str(z) +\
                       ',' + str(rx) + ',' + str(ry) + ',' + str(rz) + ']' +\
                       '),' + str(acc) + ',' + str(speed) + ')\n'
-        self.socket_ur_send.send(send_string.encode())
-        data = self.wait()
+        self.socket.send(send_string.encode())
+        if wait:
+            self.wait()
 
-        return data
-
-    def speed(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, acc=0.5, time=1):
-        self.socket_ur_send.send(('speedl([' + str(x) + ',' + str(y) + ',' +
+    def speed(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, acc=0.5, time=1,
+              wait=False):
+        self.socket.send(('speedl([' + str(x) + ',' + str(y) + ',' +
                                   str(z) + ',' + str(rx) + ',' + str(ry) +
                                   ',' + str(rz) + '],' + str(acc) + ',' +
                                   str(time) + ')\n').encode())
-        self.wait()
+        if wait:
+            self.wait()
 
     def set_home(self, pos, angle):
         self.home_position = pos
@@ -152,55 +172,46 @@ class UR:
         time.sleep(0.1)
         controller_time = 0
 
-        # OBS
-        data = []
-
-        if config_ur.CONTROLLER_VERSION < 3.2:
-            v_b_signal = list(np.ones(20))
-            v_s_signal = list(np.ones(20))
-            v_e_signal = list(np.ones(20))
-            v_w1_signal = list(np.ones(20))
-            v_w2_signal = list(np.ones(20))
-            v_w3_signal = list(np.ones(20))
+        if (self.communication_thread.message_size <
+                config_ur.MESSAGE_SIZE_TO_VERSION['3.2']):
+            velocity_series = [[1] * 20] * 6
 
         while True:
             self.read()
 
+            # Test if new data have arrived
             if controller_time != self.ur_data['time']:
                 controller_time = self.ur_data['time']
             else:
-                if int(str(config_ur.SOCKETS['port send'])[-1]) >= 3:
+                # If not sleep the rate that is equal to
+                # when the next new data should arive
+                if int(str(self.port)[-1]) >= 3:
                     time.sleep(1/1000)
                 else:
                     time.sleep(1/20)
                 continue
 
-            if config_ur.CONTROLLER_VERSION >= 3.2:
+            # If newer software then read the status directly
+            if (self.communication_thread.message_size >=
+                    config_ur.MESSAGE_SIZE_TO_VERSION['3.2']):
                 if self.ur_data['status'] == 1:
                     break
+            # Otherwise check if the arm is still moving
             else:
-                # OBS
-                data.append([self.ur_data['v_b'], self.ur_data['v_s'], self.ur_data['v_e'], 
-                             self.ur_data['v_w1'], self.ur_data['v_w2'], self.ur_data['v_w3'],
-                             self.ur_data['robot_mode']])
-
-                v_b_signal, v_b_mean = self.moving_average(v_b_signal, self.ur_data['v_b'])
-                v_s_signal, v_s_mean = self.moving_average(v_s_signal, self.ur_data['v_s'])
-                v_e_signal, v_e_mean = self.moving_average(v_e_signal, self.ur_data['v_e'])
-                v_w1_signal, v_w1_mean = self.moving_average(v_w1_signal, self.ur_data['v_w1'])
-                v_w2_signal, v_w2_mean = self.moving_average(v_w2_signal, self.ur_data['v_w2'])
-                v_w3_signal, v_w3_mean = self.moving_average(v_w3_signal, self.ur_data['v_w3'])
+                current_velocities = [self.ur_data['v_b'],
+                                      self.ur_data['v_s'],
+                                      self.ur_data['v_e'],
+                                      self.ur_data['v_w1'],
+                                      self.ur_data['v_w2'],
+                                      self.ur_data['v_w3']]
+                total_mean_velocity = 0
+                for i, velocity in enumerate(velocity_series):
+                    velocity_series[i], velocity_mean = self.moving_average(velocity, current_velocities[i])
+                    total_mean_velocity += abs(velocity_mean)
                 
-                if(abs(v_b_mean) < config_ur.VELOCITY_MEAN_THRESHOLD and
-                   abs(v_s_mean) < config_ur.VELOCITY_MEAN_THRESHOLD and
-                   abs(v_e_mean) < config_ur.VELOCITY_MEAN_THRESHOLD and
-                   abs(v_w1_mean) < config_ur.VELOCITY_MEAN_THRESHOLD and
-                   abs(v_w2_mean) < config_ur.VELOCITY_MEAN_THRESHOLD and
-                   abs(v_w3_mean) < config_ur.VELOCITY_MEAN_THRESHOLD):
-                    time.sleep(0.05) # Give time for velocities to reach 0
+                if total_mean_velocity < config_ur.VELOCITY_MEAN_THRESHOLD * 6:
+                    #time.sleep(0.05)  # Give time for velocities to reach 0
                     break
-
-        return data
 
     def moving_average(self, signal, new_point):
         if new_point > 1e5:
@@ -212,9 +223,9 @@ class UR:
 
     def send_line(self, _str):
         if type(_str) is str:
-            self.socket_ur_send.send(_str.encode())
+            self.socket.send(_str.encode())
         elif type(_str) is bytes:
-            self.socket_ur_send.send(_str)
+            self.socket.send(_str)
         else:
             print("Input to send_line must be of type str or type bytes")
 

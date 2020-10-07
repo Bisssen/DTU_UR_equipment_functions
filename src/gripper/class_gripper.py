@@ -6,12 +6,12 @@ from .communication_gripper import GripperSerial
 
 
 class Gripper:
-    def __init__(self):
+    def __init__(self, usb_port=None):
         # Checking python version
         self.python_2 = (sys.version_info.major == 2)
 
         # Getting gripper connection class
-        self.gripper_serial = GripperSerial()
+        self.gripper_serial = GripperSerial(usb_port)
 
         # Activating gripper
         print('    Activating gripper...')

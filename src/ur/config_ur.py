@@ -3,7 +3,7 @@ from math import pi
 CONTROLLER_VERSION = 1.8
 VELOCITY_MEAN_THRESHOLD = 0.001
 
-IP = '192.38.66.254'
+IP = '192.38.66.226'
 PORT = 30003
 
 DATA_MAP = {'message_size': 0, 'time': 4,
@@ -15,6 +15,25 @@ DATA_MAP = {'message_size': 0, 'time': 4,
             'f_x': 540, 'f_y': 548, 'f_z': 556, 'f_rx': 564, 'f_ry': 572, 'f_rz': 580,
             'x': 588, 'y': 596, 'z': 604, 'rx': 612, 'ry': 620, 'rz': 628,
             'robot_mode': 756, 'status': 1052}
+
+# Data name to data size mapping
+# Message size is only 4 long
+DATA_SIZE = {'message_size': 4}
+# The rest is 8 so set that
+for data_name, _ in DATA_MAP.items():
+    if data_name == 'message_size':
+        continue
+    DATA_SIZE[data_name] = 8
+
+# Data name to data type mapping
+# Message size is an integer
+DATA_TYPE = {'message_size': '!i'}
+# The rest is doubles
+for data_name, _ in DATA_MAP.items():
+    if data_name == 'message_size':
+        continue
+    DATA_TYPE[data_name] = '!d'
+
 
 # UR5 transform
 TRANSFORM = {'p0i':[-403.50, 242.49, 27.22],

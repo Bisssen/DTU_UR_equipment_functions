@@ -41,8 +41,6 @@ class UR:
 
         # Starting communication script
         self.communication_thread = communication_thread()
-        # Wait for the thread to optain some data
-        time.sleep(2)
 
     def transform_init(self, p0i, pxi, pyi):
         p0 = np.array(p0i)

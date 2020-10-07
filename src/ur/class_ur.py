@@ -40,7 +40,9 @@ class UR:
                                      config_ur.PORT))
 
         # Starting communication script
-        self.communication_thread = communication_thread(self.python_2)
+        self.communication_thread = communication_thread()
+        # Wait for the thread to optain some data
+        time.sleep(2)
 
     def transform_init(self, p0i, pxi, pyi):
         p0 = np.array(p0i)
@@ -136,7 +138,8 @@ class UR:
         self.home_angle = angle
 
     def home(self):
-        self.move(*(self.home_position), *(self.home_angle))
+        self.move(self.home_position[0], self.home_position[1], self.home_position[2],
+                  self.home_angle[0], self.home_angle[1], self.home_angle[2])
 
     def read(self):
         data = self.communication_thread.data

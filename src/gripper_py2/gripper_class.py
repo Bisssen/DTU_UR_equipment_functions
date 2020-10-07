@@ -1,12 +1,13 @@
 import time
 
-import config_gripper as cfg_gripper
-from CommunicationGripper import gripperSerial
+import gripper_config
+from gripper_communication import GripperSerial
+
 
 class Gripper:
     def __init__(self):
-        self.gripper_serial = gripperSerial()
-        
+        self.gripper_serial = GripperSerial()
+
         # Activating gripper
         print('    Activating gripper...')
         success = self.activate()
@@ -21,18 +22,18 @@ class Gripper:
     def read(self):
         response = self.gripper_serial.read()
         split = response.split(';')
-        reg07D0 = split[0]
-        reg07D1 = split[1]
-        reg07D2 = split[2]
-        return reg07D0, reg07D1, reg07D2
+        register_07D0 = split[0]
+        register_07D1 = split[1]
+        register_07D2 = split[2]
+        return register_07D0, register_07D1, register_07D2
 
-    def getPosition(self):
-        _, _, reg07D2 = self.read()
-        return int(reg07D2[0:2], 16)
+    def get_position(self):
+        _, _, register_07D2 = self.read()
+        return int(register_07D2[0:2], 16)
 
-    def getStatus(self):
-        reg07D0, _, _ = self.read()
-        status = bin(int(reg07D0[0:2], 16))[2:].zfill(8)
+    def get_status(self):
+        register_07D0, _, _ = self.read()
+        status = bin(int(register_07D0[0:2], 16))[2:].zfill(8)
         gOBJ = int(status[0:2], 2)
         gSTA = int(status[2:4], 2)
         gGTO = int(status[4], 2)
@@ -41,7 +42,9 @@ class Gripper:
 
     def set(self, pos, speed=255, force=255):
         if (0 <= pos <= 255) & (0 <= speed <= 255) & (0 <= force <= 255):
-            self.gripper_serial.set(('{:d};{:d};{:d}'.format(int(pos), int(speed), int(force))))
+            self.gripper_serial.set(('{:d};{:d};{:d}'.format(int(pos),
+                                                             int(speed),
+                                                             int(force))))
         else:
             if not 0 <= pos <= 255:
                 print('Gripper position not allowed.')
@@ -49,10 +52,10 @@ class Gripper:
                 print('Gripper speed not allowed.')
             if not 0 <= force <= 255:
                 print('Gripper force not allowed.')
-   
+
     def wait(self):
         while True:
-            gOBJ, _, _, _ = self.getStatus()
+            gOBJ, _, _, _ = self.get_status()
             if gOBJ != 0:
                 break
 

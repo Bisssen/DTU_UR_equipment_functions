@@ -3,35 +3,39 @@ import time
 import serial.tools.list_ports
 import binascii
 
-import config_gripper as cfg
+import gripper_config
 
 
-class gripperSerial():
+class GripperSerial():
     def __init__(self):
-        ########################## CONNECTING TO GRIPPER #############################
+        # Determining port used for gripper connection
         ports = list(serial.tools.list_ports.comports())
-	ports = ("/dev/ttyUSB0", "Custom written port")
-	port = "/dev/ttyUSB0"
+        ports = ('/dev/ttyUSB0', 'Custom written port')
+        port = '/dev/ttyUSB0'
         print('    Equipment found on port ' + port)
 
-        self.ser = serial.Serial(port=port, baudrate=115200, timeout=1, parity=serial.PARITY_NONE,
-                                 stopbits=serial.STOPBITS_ONE, bytesize=serial.EIGHTBITS)
+        # Setting up serial connection for communication
+        self.ser = serial.Serial(port=port, baudrate=115200, timeout=1,
+                                 parity=serial.PARITY_NONE,
+                                 stopbits=serial.STOPBITS_ONE,
+                                 bytesize=serial.EIGHTBITS)
 
     def shutdown(self):
         self.ser.close()
 
     def activate(self):
+        # Sending activation codes and checking received bytes
         self.ser.write('\x09\x10\x03\xE8\x00\x03\x06\x00\x00\x00\x00\x00\x00\x73\x30')
-        response = self.readBytes(8)
+        response = self.read_bytes(8)
         self.ser.write('\x09\x10\x03\xE8\x00\x03\x06\x01\x00\x00\x00\x00\x00\x72\xE1')
-        response = self.readBytes(8)
+        response = self.read_bytes(8)
 
         act_timeout = 10
         start_time = time.time()
         success = False
         while True:
             self.ser.write('\x09\x03\x07\xD0\x00\x01\x85\xCF')
-            response = self.readBytes(7)
+            response = self.read_bytes(7)
             if response == '09030231004C15':
                 success = True
                 break
@@ -40,32 +44,30 @@ class gripperSerial():
         return success
 
     def read(self):
-        cmd = addCRC('\x09\x03\x07\xD0\x00\x03')
+        cmd = add_CRC('\x09\x03\x07\xD0\x00\x03')
         self.ser.write(cmd)
-        response = self.readBytes(11)
+        response = self.read_bytes(11)
         reg07D0 = response[6:10]
         reg07D1 = response[10:14]
         reg07D2 = response[14:18]
         response_str = '{};{};{}'.format(reg07D0, reg07D1, reg07D2)
         return response_str
 
-    def set(self, command):        
-        self.setGripper(*unpickle(command))
-        response = self.readBytes(8)
+    def set(self, command):
+        self.set_gripper(*unpickle(command))
+        response = self.read_bytes(8)
 
-    def setGripper(self, pos, speed, force):
+    def set_gripper(self, pos, speed, force):
         cmd_init = '\x09\x10\x03\xE8\x00\x03\x06\x09\x00\x00' +\
                    chr(pos) + chr(speed) + chr(force)
-        cmd = addCRC(cmd_init)
+        cmd = add_CRC(cmd_init)
         self.ser.write(cmd)
 
-    def readBytes(self, num_bytes):
+    def read_bytes(self, num_bytes):
         return self.ser.read(num_bytes).encode('hex').upper()
 
 
-
-###################### CRC CALCULATION FUNTION ###############################
-def calculateCRC(st):
+def calculate_CRC(st):
     table = (
         0x0000, 0xC0C1, 0xC181, 0x0140, 0xC301, 0x03C0, 0x0280, 0xC241,
         0xC601, 0x06C0, 0x0780, 0xC741, 0x0500, 0xC5C1, 0xC481, 0x0440,
@@ -98,7 +100,7 @@ def calculateCRC(st):
         0x8801, 0x48C0, 0x4980, 0x8941, 0x4B00, 0x8BC1, 0x8A81, 0x4A40,
         0x4E00, 0x8EC1, 0x8F81, 0x4F40, 0x8D01, 0x4DC0, 0x4C80, 0x8C41,
         0x4400, 0x84C1, 0x8581, 0x4540, 0x8701, 0x47C0, 0x4680, 0x8641,
-        0x8201, 0x42C0, 0x4380, 0x8341, 0x4100, 0x81C1, 0x8081, 0x4040 
+        0x8201, 0x42C0, 0x4380, 0x8341, 0x4100, 0x81C1, 0x8081, 0x4040
     )
 
     # Initial MODBUS CRC
@@ -106,24 +108,24 @@ def calculateCRC(st):
 
     for ch in st:
         crc = (crc >> 8) ^ table[(crc ^ ord(ch)) & 0xFF]
-    
+
     crc = str(hex(crc))
 
     # Taking care of implicit zeros in the CRC
     if len(crc) < 6:
         add = ''
-        for i in range(0,6-len(crc)):
+        for i in range(0, 6-len(crc)):
             add += '0'
-        crc = '0x{}{}'.format(add,crc[2:])
+        crc = '0x{}{}'.format(add, crc[2:])
 
-    return binascii.unhexlify(''.join([crc[4:6],crc[2:4]]))
+    return binascii.unhexlify(''.join([crc[4:6], crc[2:4]]))
 
 
-def addCRC(cmd_init):
-    crc = calculateCRC(cmd_init)
+def add_CRC(cmd_init):
+    crc = calculate_CRC(cmd_init)
     return cmd_init + crc
+
 
 def unpickle(cmd):
     cmds_str = cmd.split(';')
     return int(cmds_str[0]), int(cmds_str[1]), int(cmds_str[2])
-

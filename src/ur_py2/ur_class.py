@@ -3,31 +3,31 @@ from math import pi
 import numpy as np
 import socket
 
-import config_robot as cfg_robot
-from CommunicationRobot import communicationThread as comThread
+import ur_config
+from ur_communication import communication_thread
 
 
 class Robot:
     def __init__(self):
-        self.Arot = np.array([[0,0,0],[0,0,0],[0,0,0]])
-        self.otask = 0
-        self.transformInit(cfg_robot.TRANSFORM['p0i'],
-                           cfg_robot.TRANSFORM['pxi'],
-                           cfg_robot.TRANSFORM['pyi'])
+        self.rotation_matrix = np.array([[0,0,0],[0,0,0],[0,0,0]])
+        self.origin_task = 0
+        self.transformInit(ur_config.TRANSFORM['p0i'],
+                           ur_config.TRANSFORM['pxi'],
+                           ur_config.TRANSFORM['pyi'])
 
-        self.home_pos = cfg_robot.HOME['position']
-        self.home_angle = cfg_robot.HOME['angle']
+        self.home_pos = ur_config.HOME['position']
+        self.home_angle = ur_config.HOME['angle']
 
         self.robot_data = {}
 
         # Connecting socket directly to robot
         self.socket_robot_send = socket.socket(socket.AF_INET,
-                                               socket.SOCK_STREAM)         
-        self.socket_robot_send.connect((cfg_robot.SOCKETS['host ip'],
-                                        cfg_robot.SOCKETS['port send']))
+                                               socket.SOCK_STREAM)
+        self.socket_robot_send.connect((ur_config.IP,
+                                        ur_config.PORT))
 
         # Starting communication script
-        self.com_thread = comThread()
+        self.communication_thread = communication_thread()
         time.sleep(2)
 
     def send_line(self, str_):
@@ -45,18 +45,18 @@ class Robot:
         vx = vx/np.linalg.norm(vx)
         vy = vy/np.linalg.norm(vy)
         vz = np.cross(vx,vy)
-        self.Arot = np.array([vx,vy,vz])
-        self.Arot = np.transpose(self.Arot)
-        self.otask = p0
+        self.rotation_matrix = np.array([vx,vy,vz])
+        self.rotation_matrix = np.transpose(self.rotation_matrix)
+        self.origin_task = p0
 
     def transform(self, x, y, z):
         b = np.array([x,y,z])
-        t = self.Arot.dot(np.transpose(b)) + self.otask
+        t = self.rotation_matrix.dot(np.transpose(b)) + self.origin_task
         return t
 
     def inverseTransform(self, x, y, z):
         b = np.array([x,y,z])
-        it = np.transpose(self.Arot).dot(np.transpose((b - self.otask)))
+        it = np.transpose(self.rotation_matrix).dot(np.transpose((b - self.origin_task)))
         return it
 
     def set_tcp(self, x=0, y=0, z=0, rx=0, ry=0, rz=0):
@@ -119,7 +119,7 @@ class Robot:
 		  self.home_angle[0], self.home_angle[1], self.home_angle[2])
 
     def read(self):
-        data = self.com_thread.data
+        data = self.communication_thread.data
         data_split = data.split(';')[:-1] # Removing last entry: empty due to fenceposting in sending process
         for item in data_split:
             data_point, data_value = item.split(':')
@@ -142,4 +142,4 @@ class Robot:
             print("Input to sendLine must be of type str or type bytes")
 
     def shutdown(self):
-        self.com_thread.shutdown()
+        self.communication_thread.shutdown()

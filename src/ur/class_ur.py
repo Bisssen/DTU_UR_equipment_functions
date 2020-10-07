@@ -4,13 +4,13 @@ import numpy as np
 import socket
 import sys
 
-from . import ur_config
-from .ur_communication import communication_thread
+from . import config_ur
+from .communication_ur import communication_thread
 
 
 class UR:
     def __init__(self):
-        # Whether the program is run in python 2 or not 
+        # Whether the program is run in python 2 or not
         self.python_2 = (sys.version_info.major == 2)
 
         #
@@ -22,13 +22,13 @@ class UR:
         self.origen_task = 0
 
         #
-        self.transform_init(ur_config.TRANSFORM['p0i'],
-                            ur_config.TRANSFORM['pxi'],
-                            ur_config.TRANSFORM['pyi'])
+        self.transform_init(config_ur.TRANSFORM['p0i'],
+                            config_ur.TRANSFORM['pxi'],
+                            config_ur.TRANSFORM['pyi'])
 
         # The default position of the gripper
-        self.home_position = ur_config.HOME['position']
-        self.home_angle = ur_config.HOME['angle']
+        self.home_position = config_ur.HOME['position']
+        self.home_angle = config_ur.HOME['angle']
 
         # Dictionary containing all the ur data which have been reading
         self.ur_data = {}
@@ -36,8 +36,8 @@ class UR:
         # Connecting socket directly to robot
         self.socket_ur_send = socket.socket(socket.AF_INET,
                                             socket.SOCK_STREAM)
-        self.socket_ur_send.connect((ur_config.IP,
-                                     ur_config.PORT))
+        self.socket_ur_send.connect((config_ur.IP,
+                                     config_ur.PORT))
 
         # Starting communication script
         self.communication_thread = communication_thread(self.python_2)
@@ -76,7 +76,7 @@ class UR:
 
     def get_position(self, world=True):
         self.read()
-        if ur_config.CONTROLLER_VERSION >= 3.0:
+        if config_ur.CONTROLLER_VERSION >= 3.0:
             x = self.ur_data['x_actual']
             y = self.ur_data['y_actual']
             z = self.ur_data['z_actual']
@@ -101,7 +101,7 @@ class UR:
 
     def move_relative(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, acc=1, speed=0.1):
         x_current, y_current, z_current = self.get_position(world=False)
-        if ur_config.CONTROLLER_VERSION >= 3.0:
+        if config_ur.CONTROLLER_VERSION >= 3.0:
             rx_current = self.ur_data['rx_actual']
             ry_current = self.ur_data['ry_actual']
             rz_current = self.ur_data['rz_actual']
@@ -154,7 +154,7 @@ class UR:
         # OBS
         data = []
 
-        if ur_config.CONTROLLER_VERSION < 3.2:
+        if config_ur.CONTROLLER_VERSION < 3.2:
             v_b_signal = list(np.ones(20))
             v_s_signal = list(np.ones(20))
             v_e_signal = list(np.ones(20))
@@ -168,13 +168,13 @@ class UR:
             if controller_time != self.ur_data['time']:
                 controller_time = self.ur_data['time']
             else:
-                if int(str(ur_config.SOCKETS['port send'])[-1]) >= 3:
+                if int(str(config_ur.SOCKETS['port send'])[-1]) >= 3:
                     time.sleep(1/1000)
                 else:
                     time.sleep(1/20)
                 continue
 
-            if ur_config.CONTROLLER_VERSION >= 3.2:
+            if config_ur.CONTROLLER_VERSION >= 3.2:
                 if self.ur_data['status'] == 1:
                     break
             else:
@@ -190,12 +190,12 @@ class UR:
                 v_w2_signal, v_w2_mean = self.moving_average(v_w2_signal, self.ur_data['v_w2'])
                 v_w3_signal, v_w3_mean = self.moving_average(v_w3_signal, self.ur_data['v_w3'])
                 
-                if(abs(v_b_mean) < ur_config.VELOCITY_MEAN_THRESHOLD and
-                   abs(v_s_mean) < ur_config.VELOCITY_MEAN_THRESHOLD and
-                   abs(v_e_mean) < ur_config.VELOCITY_MEAN_THRESHOLD and
-                   abs(v_w1_mean) < ur_config.VELOCITY_MEAN_THRESHOLD and
-                   abs(v_w2_mean) < ur_config.VELOCITY_MEAN_THRESHOLD and
-                   abs(v_w3_mean) < ur_config.VELOCITY_MEAN_THRESHOLD):
+                if(abs(v_b_mean) < config_ur.VELOCITY_MEAN_THRESHOLD and
+                   abs(v_s_mean) < config_ur.VELOCITY_MEAN_THRESHOLD and
+                   abs(v_e_mean) < config_ur.VELOCITY_MEAN_THRESHOLD and
+                   abs(v_w1_mean) < config_ur.VELOCITY_MEAN_THRESHOLD and
+                   abs(v_w2_mean) < config_ur.VELOCITY_MEAN_THRESHOLD and
+                   abs(v_w3_mean) < config_ur.VELOCITY_MEAN_THRESHOLD):
                     time.sleep(0.05) # Give time for velocities to reach 0
                     break
 

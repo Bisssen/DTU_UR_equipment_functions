@@ -38,13 +38,10 @@ class communication_thread():
     def receive(self):
         while self.running:
             data = (self.socket.recv(2048))
-            print(len(data))
             data = self.transform_data(data)
             # If no error occurred then update data
             if not data == -4444:
                 self.data = data
-            else:
-                print(data)
 
     def shutdown(self):
         self.running = False
@@ -73,7 +70,6 @@ class communication_thread():
         
         # Check that there is data to be read in the position
         if self.message_size < byte_position + data_size:
-            print(self.message_size, byte_position)
             return -4444
 
 

@@ -13,13 +13,13 @@ class GripperSerial():
         self.python_2 = (sys.version_info.major == 2)
 
         # Determining port used for gripper connection
-        ports = list(serial.tools.list_ports.comports())
-        if self.python_2:
-            ports = ('/dev/ttyUSB0', 'Custom written port')
-            port = '/dev/ttyUSB0'
-            print('    Equipment found on port ' + port)
+        if config_gripper.USB_PORT:
+            port = config_gripper.USB_PORT
         else:
+            ports = list(serial.tools.list_ports.comports())
             port = ports[0].device
+
+        print('    Equipment found on port ' + port)
 
         # Setting up serial connection for communication
         self.serial = serial.Serial(port=port, baudrate=115200, timeout=1,

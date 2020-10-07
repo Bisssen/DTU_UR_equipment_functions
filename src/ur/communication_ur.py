@@ -2,6 +2,7 @@ import socket
 import struct
 import threading
 import sys
+import time
 
 from . import config_ur
 
@@ -12,16 +13,20 @@ class communication_thread():
         self.python_2 = (sys.version_info.major == 2)
 
         # Creating the socket
-        self.socket_robot = socket.socket(socket.AF_INET,
-                                          socket.SOCK_STREAM)
-        self.socket_robot.connect((config_ur.IP,
-                                   config_ur.PORT))
+        self.socket_ur = socket.socket(socket.AF_INET,
+                                       socket.SOCK_STREAM)
+        time_start = time.time()
+        self.socket_ur.connect((config_ur.IP,
+                                config_ur.PORT))
 
         # The thread keeps going as long as this variable is true
         self.running = True
 
         # The data which the thread optains from the ur
         self.data = 0
+
+        # Read the message size
+        self.message_size = self.get_message_size()
 
         # The thread which keeps receiving data
         self.receive_thread = threading.Thread(target=self.receive)
@@ -32,17 +37,24 @@ class communication_thread():
 
     def receive(self):
         while self.running:
-            data = (self.socket_robot.recv(2048))
+            data = (self.socket_ur.recv(2048))
             self.data = self.transform_data(data)
 
     def shutdown(self):
         self.running = False
         self.receive_thread.join()
-        self.socket_robot.close()
+        self.socket_ur.close()
 
-    def transform_data_point(self, data, data_type):
-        num = config_ur.DATA_MAP[data_type]
-        data = data[num:num+8]
+    def get_message_size(self):
+        data = (self.socket_ur.recv(2048))
+        message_size = self.transform_data_point(data, "message_size")
+        self.data = self.transform_data(data)
+        
+        return message_size
+
+    def transform_data_point(self, data, data_name):
+        num = config_ur.DATA_MAP[data_name]
+        data = data[num:num + config_ur.DATA_SIZE[data_name]]
 
         # Convert the data from \x hex notation to plain hex
         if self.python_2:
@@ -50,15 +62,16 @@ class communication_thread():
         else:
             data = data.hex()
 
-        if len(data) == 16:
+        if len(data) == config_ur.DATA_SIZE[data_name] * 2:
             if self.python_2:
-                data = struct.unpack('!d', data.decode("hex"))[0]
+                data = struct.unpack(config_ur.DATA_TYPE[data_name],
+                                     data.decode("hex"))[0]
             else:
-                data = struct.unpack('!d', bytes.fromhex(data))[0]
+                data = struct.unpack(config_ur.DATA_TYPE[data_name],
+                                     bytes.fromhex(data))[0]
             return data
         else:
             return 0
-
 
     def transform_data(self, data):
         data_string = ''

@@ -11,7 +11,7 @@ The necessary setup to begin controlling this equipment:
 5. *IMPORTANT* Remember to use the **shutdown** functions in each equipment's class to close the connections when the scripts have finished using the equipment.
 
 ## UR robots
-The **UR** class contains all the functionality needed to control the robot arm. Create a robot object of the class and use this object to communicate with the robot.
+The **UR** class contains all the functionality needed to control the robot arm. Create a UR object of the class and use this object to communicate with the robot.
 
 With this object it is possible to read the data retrieved from the robot server and send commands to the robot. Multiple object functions have been implemented to ease the command communication; these include the following (but are not limited to):
 1. **move**: moves the robot to a point defined by (x, y, z, rx, ry, rz).
@@ -28,7 +28,7 @@ Functionality has been implemented to work in a task frame instead of working in
 2. Either input these three points in the **TRANSFORM** dictionary in the **config_robot.py** configuration file or manually conduct the initialization of the transformation using the **UR** object function **transform_init** and inputting these three points as arguments.
 
 ### Reading robot data
-In the robot configuration file, **config_robot.py**, the data to be read from the robot server is given by the dictionary **DATA_MAP**. This chosen data from this map is non-exhaustive, and depending on the robot server's software version more data can be managed. The source for reading and understanding the read data is from UR's own site: https://www.universal-robots.com/articles/ur/remote-control-via-tcpip/. A downloadable Excel sheet contains the necessary information about which bytes contain which robot information.
+In the UR configuration file, **config_ur.py**, the data to be read from the robot server is given by the dictionary **DATA_MAP**. This chosen data from this map is non-exhaustive, and depending on the robot server's software version more data can be managed. The source for reading and understanding the read data is from UR's own site: https://www.universal-robots.com/articles/ur/remote-control-via-tcpip/. A downloadable Excel sheet contains the necessary information about which bytes contain which robot information.
 
 Additionally, this sheet can be found in the **resources** folder of this repository.
 

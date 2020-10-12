@@ -11,7 +11,7 @@ The necessary setup to begin controlling this equipment:
 5. *IMPORTANT* Remember to use the **shutdown** functions in each equipment's class to close the connections when the scripts have finished using the equipment.
 
 ## UR robots
-The **UR** class contains all the functionality needed to control the robot arm. Create a robot object of the class and use this object to communicate with the robot.
+The **UR** class contains all the functionality needed to control the robot arm. Create a UR object of the class and use this object to communicate with the robot.
 
 With this object it is possible to read the data retrieved from the robot server and send commands to the robot. Multiple object functions have been implemented to ease the command communication; these include the following (but are not limited to):
 1. **move**: moves the robot to a point defined by (x, y, z, rx, ry, rz).

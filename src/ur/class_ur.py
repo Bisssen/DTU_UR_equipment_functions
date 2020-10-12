@@ -10,6 +10,7 @@ from .communication_ur import communication_thread
 
 class UR:
     def __init__(self, ip=None, port=None):
+        return
         # Whether the program is run in python 2 or not
         self.python_2 = (sys.version_info.major == 2)
 

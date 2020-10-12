@@ -130,6 +130,7 @@ dmypy.json
 
 # Ignore test files
 test.py
+test2.py
 blockstack.py
 robot.py
 home.py

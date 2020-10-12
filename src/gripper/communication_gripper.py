@@ -1,8 +1,14 @@
-import serial
 import time
-import serial.tools.list_ports
 import binascii
 import sys
+
+# Check if serial is installed
+try:
+    import serial
+    import serial.tools.list_ports
+except ModuleNotFoundError:
+    pass
+
 
 from . import config_gripper
 

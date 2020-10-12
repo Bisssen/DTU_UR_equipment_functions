@@ -21,11 +21,11 @@ With this object it is possible to read the data retrieved from the robot server
 
 ### Setting up a task frame
 Functionality has been implemented to work in a task frame instead of working in robot base coordinates. It is necessary to find the transformation for the desired task frame before this functionality can be utilized. To setup a task frame:
-1. ***Find the transformation***: place the robot tool point at the following three points in the task frame and read the robot base coordinates (x, y, z) for each point.
+1. Find the transformation parameters by placing the robot tool point at the following three points in the task frame and read the robot base coordinates (x, y, z) for each point.
     1. Task frame origin, **p0i**.
     2. At the point 10cm along the x-axis, **pxi**.
     3. At the point 10cm along the y-axis, **pyi**.
-2. Either input these three points in the **TRANSFORM** dictionary in the **config_robot.py** configuration file or manually conduct the initialization of the transformation using the **UR** object function **transform_init** and inputting these three points.
+2. Either input these three points in the **TRANSFORM** dictionary in the **config_robot.py** configuration file or manually conduct the initialization of the transformation using the **UR** object function **transform_init** and inputting these three points as arguments.
 
 ### Reading robot data
 In the robot configuration file, **config_robot.py**, the data to be read from the robot server is given by the dictionary **DATA_MAP**. This chosen data from this map is non-exhaustive, and depending on the robot server's software version more data can be managed. The source for reading and understanding the read data is from UR's own site: https://www.universal-robots.com/articles/ur/remote-control-via-tcpip/. A downloadable Excel sheet contains the necessary information about which bytes contain which robot information.

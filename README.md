@@ -27,3 +27,5 @@ Functionality has been implemented to work in a task frame instead of working in
 
 ### Reading robot data
 In the robot configuration file, **config_robot.py**, the data to be read from the robot server is given by the dictionary **DATA_MAP**. This chosen data from this map is non-exhaustive, and depending on the robot server's software version more data can be managed. The source for reading and understanding the read data is from UR's own site: https://www.universal-robots.com/articles/ur/remote-control-via-tcpip/. A downloadable Excel sheet contains the necessary information about which bytes contain which robot information.
+
+Additionally, this sheet can be found in the **Resources** folder of this repository.

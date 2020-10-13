@@ -4,11 +4,12 @@
 This repository allows for a quick setup with plug-and-play functionality when using Python to control UR robot arms and Robotiq grippers.
 
 The necessary setup to begin controlling this equipment:
-1. Connect the UR robot with an Ethernet cable and connect the Robotiq gripper with a USB cable.
-2. Input the connection information IP/PORT for the UR robot and USB PORT for the Robotiq gripper in the respective **config_robot.py** and **config_gripper.py** files.
-3. *OPTIONAL* Install Python package **pyserial** to use the Robotiq gripper from a Windows OS.
-4. Import **UR** class from **src/ur/class_ur.py** and **Gripper** class from **src/gripper/class_gripper**.
-5. *IMPORTANT* Remember to use the **shutdown** functions in each equipment's class to close the connections when the scripts have finished using the equipment.
+1. Install Python package **numpy**.
+2. *OPTIONAL* Install Python package **pyserial** to use the Robotiq gripper from a Windows OS.
+3. Connect the UR robot with an Ethernet cable and connect the Robotiq gripper with a USB cable.
+4. Input the connection information IP/PORT for the UR robot and USB PORT for the Robotiq gripper in the respective **config_robot.py** and **config_gripper.py** files.
+5. Import **UR** class from **src/ur/class_ur.py** and **Gripper** class from **src/gripper/class_gripper**.
+6. *IMPORTANT* Remember to use the **shutdown** functions in each equipment's class to close the connections when the scripts have finished using the equipment.
 
 ## UR robots
 The **UR** class contains all the functionality needed to control the robot arm. Create a UR object of the class and use this object to communicate with the robot.

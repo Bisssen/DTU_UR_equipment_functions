@@ -2,6 +2,8 @@ import sys
 import time
 
 from .server.class_server import Server
+from .server.server_data_helping_functions import check_request, convert_to_bool,\
+                                                  test_if_within_function_limits
 from .ur.class_ur import UR
 
 
@@ -44,8 +46,8 @@ class URServer:
                     request = request.decode()
 
                 left_over_data, request,\
-                    request_complete = self.check_request(request,
-                                                          left_over_data)
+                    request_complete = check_request(request,
+                                                     left_over_data)
 
                 # Check if an entire message have been received
                 if not request_complete:
@@ -54,28 +56,8 @@ class URServer:
                 # React on the request sent
                 self.handle_request(request)
         except KeyboardInterrupt:
+            self.ur.shutdown()
             print('KeyboardInterrupt')
-
-    def check_request(self, request, left_over_data):
-        # If request is None, simply handle leftover data
-        if request is None:
-            request = ''
-        # Add any leftover data from an earlier message
-        full_message = left_over_data + request
-        
-        # Check if the end character have been sent
-        if '\n' in full_message:
-            # If it have, then split the message
-            full_message_split = full_message.split('\n')
-            # Process the messages one at a time in chronological order
-            request = full_message_split[0]
-            # The rest of the message gets pushed to next time
-            left_over_data = full_message[len(request) + 1:]
-            request_complete = True
-        else:
-            request_complete = False
-
-        return left_over_data, request, request_complete
 
     def handle_request(self, request):
         request_splitted = request.split(':')
@@ -121,8 +103,8 @@ class URServer:
 
     def translate_request_to_move(self, request_splitted, request):
         # Check that the request have the right amount of inputs
-        if self.test_if_within_function_limits(3, 10, len(request_splitted),
-                                               'move', request):
+        if test_if_within_function_limits(3, 10, len(request_splitted),
+                                          'move', request):
             return
         request_values = []
         for i, value in enumerate(request_splitted):
@@ -136,8 +118,8 @@ class URServer:
 
     def translate_request_to_move_relative(self, request_splitted, request):
         # Check that the request have the right amount of inputs
-        if self.test_if_within_function_limits(0, 9, len(request_splitted),
-                                               'move_relative', request):
+        if test_if_within_function_limits(0, 9, len(request_splitted),
+                                          'move_relative', request):
             return
         request_values = []
         for i, value in enumerate(request_splitted):
@@ -151,8 +133,8 @@ class URServer:
 
     def translate_request_to_move_tool(self, request_splitted, request):
         # Check that the request have the right amount of inputs
-        if self.test_if_within_function_limits(0, 9, len(request_splitted),
-                                               'move_tool', request):
+        if test_if_within_function_limits(0, 9, len(request_splitted),
+                                          'move_tool', request):
             return
         request_values = []
         for i, value in enumerate(request_splitted):
@@ -166,8 +148,8 @@ class URServer:
 
     def translate_request_to_move_tool(self, request_splitted, request):
         # Check that the request have the right amount of inputs
-        if self.test_if_within_function_limits(0, 9, len(request_splitted),
-                                               'speed', request):
+        if test_if_within_function_limits(0, 9, len(request_splitted),
+                                          'speed', request):
             return
         request_values = []
         for i, value in enumerate(request_splitted):
@@ -190,8 +172,8 @@ class URServer:
         self.response = self.encode_response(response)
 
     def translate_request_to_get_position(self, request_splitted, request):
-        if self.test_if_within_function_limits(0, 1, len(request_splitted),
-                                               'get_position', request):
+        if test_if_within_function_limits(0, 1, len(request_splitted),
+                                          'get_position', request):
             return
         request_values = []
         for i, value in enumerate(request_splitted):
@@ -227,7 +209,8 @@ class URServer:
         self.response = self.encode_response(response)
 
     def translate_request_to_send_line(self, request):
-        self.ur.send_line(request)
+        # Add a new \n, since the old got removed
+        self.ur.send_line(request + "\n")
 
     # Encodes the response, if using python 3
     def encode_response(self, response):
@@ -236,10 +219,3 @@ class URServer:
             response = response.encode()
 
         return response
-
-
-def convert_to_bool(value):
-    if value == 'True' or value == 'true':
-        return True
-    else:
-        return False

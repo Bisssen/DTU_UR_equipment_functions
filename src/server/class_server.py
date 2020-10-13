@@ -49,7 +49,7 @@ class Server():
             try:
                 (client, _) = self.socket.accept()
             except BlockingIOError:
-                return   
+                return
 
         # Save the client
         self.client_socket = client

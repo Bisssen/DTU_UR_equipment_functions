@@ -7,7 +7,7 @@ VERSION_3_2_MESSAGE_SIZE = 1060
 MESSAGE_SIZE_TO_VERSION = {'3.0': 1044, '3.2': 1060}
 
 
-IP = '192.38.66.226'
+IP = '192.38.66.254'
 PORT = 30003
 
 DATA_MAP = {'message_size': 0, 'time': 1,

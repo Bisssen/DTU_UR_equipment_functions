@@ -49,3 +49,16 @@ The gripper takes three inputs: *position*, *speed* and *force* to determine how
 
 ### Connection on Linux OS
 When using a Linux OS it is not required to install the Python package **pyserial**. However, there is no automated way of determining the gripper's USB port, and as such the file path to the USB port has to be manually set in the gripper configuration file **config_gripper.py**.
+
+
+## Servers
+Two servers exist, one for the UR class and one for the Gripper class. These servers pass information sent to them to their respective classes. The servers are completely optional, and exist to allow the framework to be used with other programming languages than python. The servers are called **ur_server.py** and **gripper_server.py**, and they will automatically start and connect to the UR and Gripper if started.
+
+To start a server, do the following:
+1. Create a **GripperServer** or **URServer** object.
+2. *OPTIONAL* Give the server objects a port which they should create the server on by passing it as an input. The default port is 4444 for **URServer** and 4443 for **GripperServer**.
+3. Connect to the server via socket.
+4. Send commands to the server via socket. The commands that can be sent are the same as described above. A command must be sent as a string  in a specific pattern, with the command name first, its inputs separated  by ":" and the string must end with "\\n", such that it looks like "command:input1:input2:input3\\n". E.g. a move command could look like: "move:0.1:0.2:-0.1\\n". 
+5. There is one exception to sending commands. That is if the user wants to send a send_line command to the **UR**. The user can instead directly send the line intended for the **UR** to the **URServer**, and the server will automatically pass it forward to the **UR**.
+
+

@@ -4,7 +4,7 @@ import numpy as np
 import socket
 import sys
 
-from . import config_ur
+from . import config_force_sensor
 from .communication_force_sensor import communication_thread
 
 
@@ -33,27 +33,30 @@ class ForceSensor:
     # The return_rz is for legacy reasons
     def create_reference_force(self, amount_of_measurements,
                                list_of_desired_forces):
+        # Make sure data have been recieved
+        while True:
+            if len(self.communication_thread.data) < 6:
+                continue
+            break
+
         # Init variables
         count = 0
         old_measurement = 0
-        force_measurements = [None] * len(list_of_desired_forces)
+        force_measurements = [[]] * len(list_of_desired_forces)
 
         # Keep going until the desired amount of measurements have been achieved
         while True:
-            time.sleep(0.001)
+            time.sleep(0.005)
             # Read the force on the arm
-            measurement = self.communication_thread.data
-
-            # Discard duplicate measurements
-            if measurement == old_measurement:
+            if str(measurement) == old_measurement:
                 continue
             else:
-                old_measurement = measurement
+                old_measurement = str(measurement)
 
             for i, desired_force in enumerate(list_of_desired_forces):
                 # Check that the inputs given to the function is valid
                 if not desired_force in config_force_sensor.FORCE_LIST:
-                    print(str(desired_force) ' is not a valid force direction. ' +
+                    print(str(desired_force) + ' is not a valid force direction. ' +
                           'It must be a value from: ' +
                           str(config_force_sensor.FORCE_LIST))
                     continue

@@ -40,6 +40,7 @@ class ForceSensor:
 
         # Keep going until the desired amount of measurements have been achieved
         while True:
+            time.sleep(0.001)
             # Read the force on the arm
             measurement = self.communication_thread.data
 

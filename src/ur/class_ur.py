@@ -14,12 +14,12 @@ class UR:
         self.python_2 = (sys.version_info.major == 2)
 
         #
-        self.rotation_matrice = np.array([[0, 0, 0],
+        self.rotation_matrix = np.array([[0, 0, 0],
                                           [0, 0, 0],
                                           [0, 0, 0]])
 
         #
-        self.origen_task = 0
+        self.origin_task = 0
 
         #
         self.transform_init(config_ur.TRANSFORM['p0i'],
@@ -66,18 +66,19 @@ class UR:
         vx = vx/np.linalg.norm(vx)
         vy = vy/np.linalg.norm(vy)
         vz = np.cross(vx, vy)
-        self.rotation_matrice = np.array([vx, vy, vz])
-        self.rotation_matrice = np.transpose(self.rotation_matrice)
-        self.origen_task = p0
+        vy = np.cross(vz, vx)
+        self.rotation_matrix = np.array([vx, vy, vz])
+        self.rotation_matrix = np.transpose(self.rotation_matrix)
+        self.origin_task = p0
 
     def transform(self, x, y, z):
         b = np.array([x, y, z])
-        t = self.rotation_matrice.dot(np.transpose(b)) + self.origen_task
+        t = self.rotation_matrix.dot(np.transpose(b)) + self.origin_task
         return t
 
     def inverse_transform(self, x, y, z):
         b = np.array([x, y, z])
-        it = np.transpose(self.rotation_matrice).dot(np.transpose((b - self.origen_task)))
+        it = np.transpose(self.rotation_matrix).dot(np.transpose((b - self.origin_task)))
         return it
 
     def set_tcp(self, x=0, y=0, z=0, rx=0, ry=0, rz=0):

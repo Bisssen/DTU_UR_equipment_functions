@@ -3,11 +3,18 @@ import binascii
 import sys
 
 # Check if serial is installed
-try:
-    import serial
-    import serial.tools.list_ports
-except ModuleNotFoundError:
-    pass
+if (sys.version_info.major == 2):
+    try:
+        import serial
+        import serial.tools.list_ports
+    except ImportError:
+        pass
+else:
+    try:
+        import serial
+        import serial.tools.list_ports
+    except ModuleNotFoundError:
+        pass
 
 
 from . import config_gripper

@@ -24,8 +24,8 @@ With this object it is possible to read the data retrieved from the robot server
 Functionality has been implemented to work in a task frame instead of working in robot base coordinates. It is necessary to find the transformation for the desired task frame before this functionality can be utilized. To setup a task frame:
 1. Find the transformation parameters by placing the robot tool point at the following three points in the task frame and read the robot base coordinates (x, y, z) for each point.
     1. **p0i**, task frame origin.
-    2. **pxi**, at a point along the x-axis.
-    3. **pyi**, at a point along the y-axis.
+    2. **pxi**, a point along the x-axis.
+    3. **pyi**, a point along the y-axis.
 2. Either input these three points in the **TRANSFORM** dictionary in the **config_robot.py** configuration file or manually conduct the initialization of the transformation using the **UR** object function **transform_init** and inputting these three points as arguments.
 
 ### Reading robot data

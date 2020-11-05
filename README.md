@@ -11,6 +11,8 @@ The necessary setup to begin controlling this equipment:
 5. Import **UR** class from **src/ur/class_ur.py** and **Gripper** class from **src/gripper/class_gripper.py**.
 6. *IMPORTANT* Remember to use the **shutdown** functions in each equipment's class to close the connections when the scripts have finished using the equipment.
 
+**IMPORTANT** On earlier versions ( < 3.2 ) of software on the URs. The wait functions uses the speed the joints to determine when it has finished a command, and as such is prone to error at low speeds. The "VELOCITY_MEAN_THRESHOLD" threshold can be adjusted in the **src/ur/config_ur.py** file to combat this.
+
 ## UR robots
 The **UR** class contains all the functionality needed to control the robot arm. Create a UR object of the class and use this object to communicate with the robot.
 
@@ -24,8 +26,8 @@ With this object it is possible to read the data retrieved from the robot server
 Functionality has been implemented to work in a task frame instead of working in robot base coordinates. It is necessary to find the transformation for the desired task frame before this functionality can be utilized. To setup a task frame:
 1. Find the transformation parameters by placing the robot tool point at the following three points in the task frame and read the robot base coordinates (x, y, z) for each point.
     1. **p0i**, task frame origin.
-    2. **pxi**, at the point 10cm along the x-axis.
-    3. **pyi**, at the point 10cm along the y-axis.
+    2. **pxi**, a point along the x-axis.
+    3. **pyi**, a point along the y-axis.
 2. Either input these three points in the **TRANSFORM** dictionary in the **config_robot.py** configuration file or manually conduct the initialization of the transformation using the **UR** object function **transform_init** and inputting these three points as arguments.
 
 ### Reading robot data

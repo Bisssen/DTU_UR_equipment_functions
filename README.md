@@ -11,7 +11,7 @@ The necessary setup to begin controlling this equipment:
 5. Import **UR** class from **src/ur/class_ur.py** and **Gripper** class from **src/gripper/class_gripper.py**.
 6. *IMPORTANT* Remember to use the **shutdown** functions in each equipment's class to close the connections when the scripts have finished using the equipment.
 
-**IMPORTANT** On earlier versions ( < 3.2 ) of software on the URs. The wait functions uses the speed the joints to determine when it has finished a command, and as such is prone to error at low speeds. The "VELOCITY_MEAN_THRESHOLD" threshold can be adjusted in the **src/ur/config_ur.py** file to combat this.
+*IMPORTANT* On earlier versions ( < 3.2 ) of the Client Interface software on the UR robots, the wait function uses the speed of the joints to determine when it has finished a command, and as such is prone to error at low speeds. The **VELOCITY_MEAN_THRESHOLD** threshold variable can be adjusted in the **src/ur/config_ur.py** file to combat this issue.
 
 ## UR robots
 The **UR** class contains all the functionality needed to control the robot arm. Create a UR object of the class and use this object to communicate with the robot.

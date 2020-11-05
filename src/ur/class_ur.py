@@ -54,6 +54,10 @@ class UR:
         # Starting communication script
         self.communication_thread = communication_thread(self.ip, self.port)
 
+        # Make sure that the communication thread have started receiving data
+        while len(self.ur_data) == 0:
+            self.read()
+
     def transform_init(self, p0i, pxi, pyi):
         p0 = np.array(p0i)
         px = np.array(pxi)

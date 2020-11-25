@@ -49,6 +49,13 @@ With this object it is possible to read data from and send commands to the gripp
 ### Controlling the gripper fingers
 The gripper takes three inputs: *position*, *speed* and *force* to determine how to move the gripper fingers. Each of these values need to be integers between 0 and 255.
 
+### Vacuum Gripper
+The **Vacuum** class contains functionallity to activate and deactivate the sucking on a connected **Robotiq Vacuum Gripper**. Functions implemented is as following:
+1. **activate**: Activates the automatic sucking feature of the vacuum gripper. The vacuum gripper will try to establish the maximum possible vacuum level over a period of 2 seconds. If the vacuum level cannot exceed 30% after the two seconds, then the gripper will deactivate.
+2. **deactivate**: Deactivates the vacuum to drop the objects held.
+3. **wait**: waits until the activate function have managed to create a sufficient vacuum level.  
+
+
 ### Connection on Linux OS
 When using a Linux OS it is not required to install the Python package **pyserial**. However, there is no automated way of determining the gripper's USB port, and as such the file path to the USB port has to be manually set in the gripper configuration file **config_gripper.py**.
 

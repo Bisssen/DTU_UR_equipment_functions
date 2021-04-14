@@ -30,7 +30,7 @@ class communication_thread():
     def receive(self):
         while self.running:
             data = (self.socket.recv(2048))
-            data = self.transform_data(data)
+            self.transform_data(data)
 
     def shutdown(self):
         self.running = False
@@ -41,8 +41,10 @@ class communication_thread():
         # Decode the data if using python 3
         if not self.python_2:
             data = data.decode()
-        # Remove brackets from the string
-        data = data[1:-1]
+        # Get the latests force measurement
+        data = data.split("(")
+        # Remove the end bracket from the string
+        data = data[-1][:-1]
         # Split the data
         data = data.split(" , ")
         # Save the data

@@ -89,6 +89,7 @@ class UR:
         self.socket.send(('set_tcp(p[' + str(x) + ',' + str(y) +
                                   ',' + str(z) + ',' + str(rx) + ',' +
                                   str(ry) + ',' + str(rz) + '])\n').encode())
+        #self.socket.send((f'set_tcp(p[{x},{y},{z},{rx},{ry},{rz}])\n').encode())
         time.sleep(0.1)
 
     def get_position(self, world=True):
@@ -116,6 +117,7 @@ class UR:
                                   ',' + str(z) + ',' + str(rx) + ',' +
                                   str(ry) + ',' + str(rz) + '],' + str(acc) +
                                   ',' + str(speed) + ')\n').encode())
+        #self.socket.send((f'movel(p[{x},{y},{z},{rx},{ry},{rz}],{acc},{speed})\n').encode())        
         if wait:
             self.wait()
 
@@ -143,6 +145,7 @@ class UR:
                       'p[' + str(x) + ',' + str(y) + ',' + str(z) +\
                       ',' + str(rx) + ',' + str(ry) + ',' + str(rz) + ']' +\
                       '),' + str(acc) + ',' + str(speed) + ')\n'
+        #send_string = f'movel(pose_trans(get_forward_kin(),p[{x},{y},{z},{rx},{ry},{rz}]),{acc},{speed})\n'
         self.socket.send(send_string.encode())
         if wait:
             self.wait()
@@ -153,6 +156,7 @@ class UR:
                                   str(z) + ',' + str(rx) + ',' + str(ry) +
                                   ',' + str(rz) + '],' + str(acc) + ',' +
                                   str(time) + ')\n').encode())
+        #self.socket.send((f'speedl([{x},{y},{z},{rx},{ry},{rz}],{acc},{time})\n').encode())
         if wait:
             self.wait()
 
@@ -232,7 +236,7 @@ class UR:
         elif type(_str) is bytes:
             self.socket.send(_str)
         else:
-            print("Input to send_line must be of type str or type bytes")
+            print('Input to send_line must be of type str or type bytes')
 
     def shutdown(self):
         self.communication_thread.shutdown()

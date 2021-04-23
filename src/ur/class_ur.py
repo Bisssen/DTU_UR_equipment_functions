@@ -26,9 +26,14 @@ class UR:
                             config_ur.TRANSFORM['pxi'],
                             config_ur.TRANSFORM['pyi'])
 
-        # The default position of the gripper
+        # The default position of the end effector
         self.home_position = config_ur.HOME['position']
         self.home_angle = config_ur.HOME['angle']
+
+        # Setup the denavit hartenberg parameters to find forward kinematics
+        self.dh = DH(a = config_ur.DH_PARAMETERS['a'],
+                     d = config_ur.DH_PARAMETERS['d'],
+                     alpha = config_ur.DH_PARAMETERS['alpha'])
 
         # Dictionary containing all the ur data which have been reading
         self.ur_data = {}
@@ -86,10 +91,7 @@ class UR:
         return it
 
     def set_tcp(self, x=0, y=0, z=0, rx=0, ry=0, rz=0):
-        self.socket.send(('set_tcp(p[' + str(x) + ',' + str(y) +
-                                  ',' + str(z) + ',' + str(rx) + ',' +
-                                  str(ry) + ',' + str(rz) + '])\n').encode())
-        #self.socket.send((f'set_tcp(p[{x},{y},{z},{rx},{ry},{rz}])\n').encode())
+        self.socket.send((f'set_tcp(p[{x},{y},{z},{rx},{ry},{rz}])\n').encode())
         time.sleep(0.1)
 
     def get_position(self, world=True):
@@ -113,11 +115,7 @@ class UR:
              transform=True, wait=False):
         if transform:
             x, y, z = self.transform(x, y, z)
-        self.socket.send(('movel(p[' + str(x) + ',' + str(y) +
-                                  ',' + str(z) + ',' + str(rx) + ',' +
-                                  str(ry) + ',' + str(rz) + '],' + str(acc) +
-                                  ',' + str(speed) + ')\n').encode())
-        #self.socket.send((f'movel(p[{x},{y},{z},{rx},{ry},{rz}],{acc},{speed})\n').encode())        
+        self.socket.send((f'movel(p[{x},{y},{z},{rx},{ry},{rz}],{acc},{speed})\n').encode())        
         if wait:
             self.wait()
 
@@ -141,24 +139,28 @@ class UR:
 
     def move_tool(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, acc=1, speed=0.1,
                   wait=False):
-        send_string = 'movel(pose_trans(get_forward_kin(),' +\
-                      'p[' + str(x) + ',' + str(y) + ',' + str(z) +\
-                      ',' + str(rx) + ',' + str(ry) + ',' + str(rz) + ']' +\
-                      '),' + str(acc) + ',' + str(speed) + ')\n'
-        #send_string = f'movel(pose_trans(get_forward_kin(),p[{x},{y},{z},{rx},{ry},{rz}]),{acc},{speed})\n'
+        send_string = f'movel(pose_trans(get_forward_kin(),p[{x},{y},{z},{rx},{ry},{rz}]),{acc},{speed})\n'
         self.socket.send(send_string.encode())
         if wait:
             self.wait()
 
     def speed(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, acc=0.5, time=1,
               wait=False):
-        self.socket.send(('speedl([' + str(x) + ',' + str(y) + ',' +
-                                  str(z) + ',' + str(rx) + ',' + str(ry) +
-                                  ',' + str(rz) + '],' + str(acc) + ',' +
-                                  str(time) + ')\n').encode())
-        #self.socket.send((f'speedl([{x},{y},{z},{rx},{ry},{rz}],{acc},{time})\n').encode())
+        self.socket.send((f'speedl([{x},{y},{z},{rx},{ry},{rz}],{acc},{time})\n').encode())
         if wait:
             self.wait()
+
+    def get_forward_kinematics(self):
+        self.read()
+
+        b = self.ur_data['b']
+        s = self.ur_data['s']
+        e = self.ur_data['e']
+        w1 = self.ur_data['w1']
+        w2 = self.ur_data['w2']
+        w3 = self.ur_data['w3']
+
+        return self.dh.calculate_forward_kinematics([b, s, e, w1, w2, w3])
 
     def set_home(self, pos, angle):
         self.home_position = pos
@@ -219,7 +221,6 @@ class UR:
                     total_mean_velocity += abs(velocity_mean)
                 
                 if total_mean_velocity < config_ur.VELOCITY_MEAN_THRESHOLD * 6:
-                    #time.sleep(0.05)  # Give time for velocities to reach 0
                     break
 
     def moving_average(self, signal, new_point):
@@ -240,3 +241,21 @@ class UR:
 
     def shutdown(self):
         self.communication_thread.shutdown()
+
+
+class DH:
+    def __init__(self, a, d, alpha):
+        self.a = a
+        self.d = d
+        self.alpha = alpha
+    
+    def calculate_forward_kinematics(self, joints):
+        # Calculates forward kinematics for the robot based on joint values
+        T = np.identity(4)
+        for i in range(len(self.a)):
+            M_i = np.array([[cos(joints[i]), -sin(joints[i]) * cos(self.alpha[i]),  sin(self.alpha[i]) * sin(joints[i]), self.a[i] * cos(joints[i])],
+                            [sin(joints[i]),  cos(self.alpha[i]) * cos(joints[i]), -sin(self.alpha[i]) * cos(joints[i]), self.a[i] * sin(joints[i])],
+                            [0,               sin(self.alpha[i]),                   cos(self.alpha[i]),                  self.d[i]                 ],
+                            [0,               0,                                    0,                                   1                         ]])
+            T = np.matmul(T, M_i)
+        return T

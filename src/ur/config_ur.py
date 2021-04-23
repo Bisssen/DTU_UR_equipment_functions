@@ -25,6 +25,11 @@ TRANSFORM = {'p0i':[-403.50, 242.49, 27.22],
              'pxi':[-405.45, 143.12, 26.68], 
              'pyi':[-303.82, 240.87, 25.87]}
 
+# Denavit Hartenberg parameters (can be found on UR website)
+DH_PARAMETERS = {'a': [0, -0.612, -0.5723, 0, 0, 0],
+                 'd': [0.1273, 0, 0, 0.163941, 0.1157, 0.0922], 
+                 'alpha': [pi/2, 0, 0, pi/2, -pi/2, 0]}
+
 '''
 # UR3 transform
 TRANSFORM = {'p0i':[-119.38, 449.1, 10.66],

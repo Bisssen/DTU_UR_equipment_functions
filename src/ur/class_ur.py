@@ -20,14 +20,14 @@ class UR:
                                     config_ur.TRANSFORM['pxi'],
                                     config_ur.TRANSFORM['pyi'])
         else:
-            print('"TRANSFORM" has not been set: task2base and base2task transforms are not available.')
+            print('UR: "TRANSFORM" has not been set: task2base and base2task transforms are not available.')
 
         # The default pose of the end effector
         self.home_pose = None
         if HOME_POSE in config_ur.__dict__:
             self.set_home(pose=config_ur.HOME_POSE)
         else:
-            print('"HOME_POSE" has not been set: home functionality is not available.')
+            print('UR: "HOME_POSE" has not been set: home functionality is not available.')
 
         # The denavit hartenberg parameters to find forward kinematics
         self.dh = None
@@ -36,7 +36,7 @@ class UR:
                                    config_ur.DH_PARAMETERS['d'],
                                    config_ur.DH_PARAMETERS['alpha'])
         else:
-            print('"DH_PARAMETERS" have not been set: forward kinematics are not available.')
+            print('UR: "DH_PARAMETERS" have not been set: forward kinematics are not available.')
 
         # Dictionary containing all the ur data which have been reading
         self.ur_data = {}
@@ -64,6 +64,8 @@ class UR:
         # Make sure that the communication thread have started receiving data
         while len(self.ur_data) == 0:
             self.read()
+        
+        print('UR: UR has been initiated.')
 
     def set_task_transform(self, p0i, pxi, pyi):
         p0 = np.array(p0i)
@@ -87,14 +89,14 @@ class UR:
         if self.task_transform:
             return self.task_transform.dot( [x, y, z, 1] )[:3]
         else:
-            print('Task transform has not been set.')
+            print('UR: Task transform has not been set.')
             return None
 
     def transform_task2base(self, x, y, z):
         if self.task_transform:
             return np.linalg.inv(self.task_transform).dot( [x, y, z, 1] )[:3]
         else:
-            print('Task transform has not been set.')
+            print('UR: Task transform has not been set.')
             return None
 
     def set_tcp(self, x=0, y=0, z=0, rx=0, ry=0, rz=0):
@@ -105,21 +107,31 @@ class UR:
         self.dh = DH(a=a, d=d, alpha=alpha)
 
     def get_position(self, world=True):
+        x, y, z, _, _, _ = self.get_pose()
+        if world:
+            return self.transform_base2task(x, y, z)
+        else:
+            return (x, y, z)
+
+    def get_pose(self):
         self.read()
-        # The older version have the position values in a different spot
+        # The older version have the position values in a different place
         if (self.communication_thread.message_size >=
                 config_ur.MESSAGE_SIZE_TO_VERSION['3.0']):
             x = self.ur_data['x_actual']
             y = self.ur_data['y_actual']
             z = self.ur_data['z_actual']
+            rx = self.ur_data['rx_actual']
+            ry = self.ur_data['ry_actual']
+            rz_current = self.ur_data['rz_actual']
         else:
             x = self.ur_data['x']
             y = self.ur_data['y']
             z = self.ur_data['z']
-        if world:
-            return self.transform_base2task(x, y, z)
-        else:
-            return (x, y, z)
+            rx = self.ur_data['rx']
+            ry = self.ur_data['ry']
+            rz = self.ur_data['rz']
+        return [x, y, z, rx, ry, rz]
 
     def get_joints(self):
         self.read()
@@ -151,34 +163,26 @@ class UR:
         if wait:
             self.wait()
 
-    def move_relative(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, 
-                            b=0, s=0, e=0, w1=0, w2=0, w3=0, 
+    def move_relative(self, dx=0, dy=0, dz=0, drx=0, dry=0, drz=0, 
+                            db=0, ds=0, de=0, dw1=0, dw2=0, dw3=0, 
                             mode='linear', acc=1, speed=0.1, wait=False):
         if mode[0] == 'l':
-            x_current, y_current, z_current = self.get_position(world=False)
-            # The older version have the position values in a different spot
-            if (self.communication_thread.message_size >=
-                    config_ur.MESSAGE_SIZE_TO_VERSION['3.0']):
-                rx_current = self.ur_data['rx_actual']
-                ry_current = self.ur_data['ry_actual']
-                rz_current = self.ur_data['rz_actual']
-            else:
-                rx_current = self.ur_data['rx']
-                ry_current = self.ur_data['ry']
-                rz_current = self.ur_data['rz']
+            x, y, z, rx, ry, rz = self.get_pose()
+            self.move(x=x + dx, y=y + dy, z=z + dz,
+                      rx=rx + drx, ry=ry + dry, rz=rz + drz,
+                      mode=mode, acc=acc, speed=speed, 
+                      transform=False, wait=wait)
 
-            self.move(x=x_current + x, y=y_current + y, z=z_current + z,
-                      rx=rx_current + rx, ry=ry_current + ry, rz=rz_current + rz,
-                      acc=acc, speed=speed, transform=False, wait=wait)
-        
         elif mode[0] == 'j':
-            joints = self.get_joints()
-
+            b, s, e, w1, w2, w3 = self.get_joints()
+            self.move(b=b + db, s=s + ds, e=e + de,
+                      w1=w1 + dw1, w2=w2 + dw2, w3=w3 + dw3,
+                      mode=mode, acc=acc, speed=speed, 
+                      transform=False, wait=wait)
 
     def move_tool(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, acc=1, speed=0.1,
                   wait=False):
-        send_string = f'movel(pose_trans(get_forward_kin(),p[{x},{y},{z},{rx},{ry},{rz}]),{acc},{speed})\n'
-        self.socket.send(send_string.encode())
+        self.socket.send((f'movel(pose_trans(get_forward_kin(),p[{x},{y},{z},{rx},{ry},{rz}]),{acc},{speed})\n').encode())
         if wait:
             self.wait()
 
@@ -215,7 +219,7 @@ class UR:
             joints = self.get_joints()
             return self.dh.calculate_forward_kinematics(joints)
         else:
-            print('DH parameters have not been set.')
+            print('UR: DH parameters have not been set.')
             return None
 
     def set_home(self, pose):
@@ -225,7 +229,7 @@ class UR:
         if self.home_pose:
             self.move(pose=self.home_pose)
         else:
-            print('Home pose has not been set.')
+            print('UR: Home pose has not been set.')
 
     def read(self):
         data = self.communication_thread.data
@@ -294,7 +298,7 @@ class UR:
         elif type(_str) is bytes:
             self.socket.send(_str)
         else:
-            print('Input to send_line must be of type str or type bytes')
+            print('UR: Input to send_line must be of type str or type bytes')
 
     def shutdown(self):
         self.communication_thread.shutdown()

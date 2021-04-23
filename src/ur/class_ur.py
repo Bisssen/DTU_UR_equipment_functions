@@ -13,34 +13,36 @@ class UR:
         # Whether the program is run in python 2 or not
         self.python_2 = (sys.version_info.major == 2)
 
-        #
-        self.rotation_matrix = np.array([[0, 0, 0],
-                                          [0, 0, 0],
-                                          [0, 0, 0]])
+        # Transformation to task
+        self.task_transform = None
+        if TRANSFORM in config_ur.__dict__:
+            self.set_task_transform(config_ur.TRANSFORM['p0i'],
+                                    config_ur.TRANSFORM['pxi'],
+                                    config_ur.TRANSFORM['pyi'])
+        else:
+            print('"TRANSFORM" has not been set: task2base and base2task transforms are not available.')
 
-        #
-        self.origin_task = 0
+        # The default pose of the end effector
+        self.home_pose = None
+        if HOME_POSE in config_ur.__dict__:
+            self.set_home(pose=config_ur.HOME_POSE)
+        else:
+            print('"HOME_POSE" has not been set: home functionality is not available.')
 
-        #
-        self.transform_init(config_ur.TRANSFORM['p0i'],
-                            config_ur.TRANSFORM['pxi'],
-                            config_ur.TRANSFORM['pyi'])
-
-        # The default position of the end effector
-        self.home_position = config_ur.HOME['position']
-        self.home_angle = config_ur.HOME['angle']
-
-        # Setup the denavit hartenberg parameters to find forward kinematics
-        self.dh = DH(a = config_ur.DH_PARAMETERS['a'],
-                     d = config_ur.DH_PARAMETERS['d'],
-                     alpha = config_ur.DH_PARAMETERS['alpha'])
+        # The denavit hartenberg parameters to find forward kinematics
+        self.dh = None
+        if DH_PARAMETERS in config_ur.__dict__:
+            self.set_dh_parameters(config_ur.DH_PARAMETERS['a'],
+                                   config_ur.DH_PARAMETERS['d'],
+                                   config_ur.DH_PARAMETERS['alpha'])
+        else:
+            print('"DH_PARAMETERS" have not been set: forward kinematics are not available.')
 
         # Dictionary containing all the ur data which have been reading
         self.ur_data = {}
 
         # Connecting socket directly to robot
-        self.socket = socket.socket(socket.AF_INET,
-                                    socket.SOCK_STREAM)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         
         # If no ip is provided, then use default
         if ip is None:
@@ -63,36 +65,44 @@ class UR:
         while len(self.ur_data) == 0:
             self.read()
 
-    def transform_init(self, p0i, pxi, pyi):
+    def set_task_transform(self, p0i, pxi, pyi):
         p0 = np.array(p0i)
         px = np.array(pxi)
         py = np.array(pyi)
-        p0 = p0/1000.
-        px = px/1000.
-        py = py/1000.
-        vx = px-p0
-        vy = py-p0
-        vx = vx/np.linalg.norm(vx)
-        vy = vy/np.linalg.norm(vy)
+        p0 = p0 / 1000.
+        px = px / 1000.
+        py = py / 1000.
+        vx = px - p0
+        vy = py - p0
+        vx = vx / np.linalg.norm(vx)
+        vy = vy / np.linalg.norm(vy)
         vz = np.cross(vx, vy)
         vy = np.cross(vz, vx)
-        self.rotation_matrix = np.array([vx, vy, vz])
-        self.rotation_matrix = np.transpose(self.rotation_matrix)
-        self.origin_task = p0
+        
+        self.task_transform = np.identity(4)
+        self.task_transform[:3,:3] = np.transpose( np.array([vx, vy, vz]) )
+        self.task_transform[:3] = p0
 
-    def transform(self, x, y, z):
-        b = np.array([x, y, z])
-        t = self.rotation_matrix.dot(np.transpose(b)) + self.origin_task
-        return t
+    def transform_base2task(self, x, y, z):
+        if self.task_transform:
+            return self.task_transform.dot( [x, y, z, 1] )[:3]
+        else:
+            print('Task transform has not been set.')
+            return None
 
-    def inverse_transform(self, x, y, z):
-        b = np.array([x, y, z])
-        it = np.transpose(self.rotation_matrix).dot(np.transpose((b - self.origin_task)))
-        return it
+    def transform_task2base(self, x, y, z):
+        if self.task_transform:
+            return np.linalg.inv(self.task_transform).dot( [x, y, z, 1] )[:3]
+        else:
+            print('Task transform has not been set.')
+            return None
 
     def set_tcp(self, x=0, y=0, z=0, rx=0, ry=0, rz=0):
         self.socket.send((f'set_tcp(p[{x},{y},{z},{rx},{ry},{rz}])\n').encode())
         time.sleep(0.1)
+
+    def set_dh_parameters(self, a, d, alpha):
+        self.dh = DH(a=a, d=d, alpha=alpha)
 
     def get_position(self, world=True):
         self.read()
@@ -107,35 +117,63 @@ class UR:
             y = self.ur_data['y']
             z = self.ur_data['z']
         if world:
-            return self.inverse_transform(x, y, z)
+            return self.transform_base2task(x, y, z)
         else:
             return (x, y, z)
 
-    def move(self, x, y, z, rx=pi, ry=0, rz=0, acc=1, speed=0.1,
-             transform=True, wait=False):
-        if transform:
-            x, y, z = self.transform(x, y, z)
-        self.socket.send((f'movel(p[{x},{y},{z},{rx},{ry},{rz}],{acc},{speed})\n').encode())        
+    def get_joints(self):
+        self.read()
+        b = self.ur_data['b']
+        s = self.ur_data['s']
+        e = self.ur_data['e']
+        w1 = self.ur_data['w1']
+        w2 = self.ur_data['w2']
+        w3 = self.ur_data['w3']
+        return [b, s, e, w1, w2, w3]
+
+    def move(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, 
+                   b=0, s=0, e=0, w1=0, w2=0, w3=0, 
+                   transform=True, pose=None, mode='linear', 
+                   acc=0.5, speed=0.1, wait=False):
+        if pose:
+            if mode[0] == 'l' and transform:
+                pose[:3] = self.transform_task2base(*pose[:3])
+            pose_string = str(pose)
+        else:
+            if mode[0] == 'l':
+                if transform:
+                    x, y, z = self.transform_task2base(x, y, z)
+                pose_string = f'[{x},{y},{z},{rx},{ry},{rz}]'
+            elif mode[0] == 'j':
+                pose_string = f'[{b},{s},{e},{w1},{w2},{w3}]'
+
+        self.socket.send((f'move{mode[0]}({pose_string},{acc},{speed})\n').encode())
         if wait:
             self.wait()
 
-    def move_relative(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, acc=1, speed=0.1,
-                      wait=False):
-        x_current, y_current, z_current = self.get_position(world=False)
-        # The older version have the position values in a different spot
-        if (self.communication_thread.message_size >=
-                config_ur.MESSAGE_SIZE_TO_VERSION['3.0']):
-            rx_current = self.ur_data['rx_actual']
-            ry_current = self.ur_data['ry_actual']
-            rz_current = self.ur_data['rz_actual']
-        else:
-            rx_current = self.ur_data['rx']
-            ry_current = self.ur_data['ry']
-            rz_current = self.ur_data['rz']
+    def move_relative(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, 
+                            b=0, s=0, e=0, w1=0, w2=0, w3=0, 
+                            mode='linear', acc=1, speed=0.1, wait=False):
+        if mode[0] == 'l':
+            x_current, y_current, z_current = self.get_position(world=False)
+            # The older version have the position values in a different spot
+            if (self.communication_thread.message_size >=
+                    config_ur.MESSAGE_SIZE_TO_VERSION['3.0']):
+                rx_current = self.ur_data['rx_actual']
+                ry_current = self.ur_data['ry_actual']
+                rz_current = self.ur_data['rz_actual']
+            else:
+                rx_current = self.ur_data['rx']
+                ry_current = self.ur_data['ry']
+                rz_current = self.ur_data['rz']
 
-        self.move(x_current + x, y_current + y, z_current + z,
-                  rx_current + rx, ry_current + ry, rz_current + rz,
-                  acc, speed, transform=False, wait=wait)
+            self.move(x=x_current + x, y=y_current + y, z=z_current + z,
+                      rx=rx_current + rx, ry=ry_current + ry, rz=rz_current + rz,
+                      acc=acc, speed=speed, transform=False, wait=wait)
+        
+        elif mode[0] == 'j':
+            joints = self.get_joints()
+
 
     def move_tool(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, acc=1, speed=0.1,
                   wait=False):
@@ -144,31 +182,50 @@ class UR:
         if wait:
             self.wait()
 
-    def speed(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, acc=0.5, time=1,
-              wait=False):
-        self.socket.send((f'speedl([{x},{y},{z},{rx},{ry},{rz}],{acc},{time})\n').encode())
+    def speed(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, 
+                    b=0, s=0, e=0, w1=0, w2=0, w3=0, 
+                    pose=None, mode='linear', 
+                    acc=0.5, time=1, wait=False):
+        if pose:
+            pose_string = f'{pose}'
+        else:
+            if mode[0] == 'l':
+                pose_string = f'[{x},{y},{z},{rx},{ry},{rz}]'
+            elif mode[0] == 'j':
+                pose_string = f'[{b},{s},{e},{w1},{w2},{w3}]'
+
+        self.socket.send((f'speed{mode[0]}({pose_string},{acc},{time})\n').encode())
+
         if wait:
             self.wait()
 
+    def speed_tool(self, x=0, y=0, z=0, acc=0.5, time=1):
+        T = self.get_forward_kinematics()
+        t = T[:3,3]
+        v_tool = np.array([x, y, z, 1])
+        v_base = T.dot(v_tool)
+        v_speed = v_base[:3] - t
+        self.speed(x=v_speed[0], y=v_speed[1], z=v_speed[2], acc=acc, time=time)
+
+        # TODO: Test built-in pose_trans for speed_tool
+        # send_string = f'movel(pose_trans(get_forward_kin(),p[{x},{y},{z},{rx},{ry},{rz}]),{acc},{speed})\n'
+
     def get_forward_kinematics(self):
-        self.read()
+        if self.dh:
+            joints = self.get_joints()
+            return self.dh.calculate_forward_kinematics(joints)
+        else:
+            print('DH parameters have not been set.')
+            return None
 
-        b = self.ur_data['b']
-        s = self.ur_data['s']
-        e = self.ur_data['e']
-        w1 = self.ur_data['w1']
-        w2 = self.ur_data['w2']
-        w3 = self.ur_data['w3']
-
-        return self.dh.calculate_forward_kinematics([b, s, e, w1, w2, w3])
-
-    def set_home(self, pos, angle):
-        self.home_position = pos
-        self.home_angle = angle
+    def set_home(self, pose):
+        self.home_pose = pose
 
     def home(self):
-        self.move(self.home_position[0], self.home_position[1], self.home_position[2],
-                  self.home_angle[0], self.home_angle[1], self.home_angle[2])
+        if self.home_pose:
+            self.move(pose=self.home_pose)
+        else:
+            print('Home pose has not been set.')
 
     def read(self):
         data = self.communication_thread.data

@@ -2,7 +2,7 @@ from math import pi
 
 VELOCITY_MEAN_THRESHOLD = 0.001
 
-VERSION_3_2_MESSAGE_SIZE = 1060
+#VERSION_3_2_MESSAGE_SIZE = 1060
 
 MESSAGE_SIZE_TO_VERSION = {'3.0': 1044, '3.2': 1060}
 
@@ -21,9 +21,9 @@ DATA_MAP = {'message_size': 0, 'time': 1,
             'robot_mode': 95, 'status': 132}
 
 # UR5 transform
-TRANSFORM = {'p0i':[-403.50, 242.49, 27.22],
-             'pxi':[-405.45, 143.12, 26.68], 
-             'pyi':[-303.82, 240.87, 25.87]}
+TRANSFORM = {'p0i': [-403.50, 242.49, 27.22],
+             'pxi': [-405.45, 143.12, 26.68], 
+             'pyi': [-303.82, 240.87, 25.87]}
 
 # Denavit Hartenberg parameters (can be found on UR website)
 DH_PARAMETERS = {'a': [0, -0.612, -0.5723, 0, 0, 0],
@@ -37,5 +37,4 @@ TRANSFORM = {'p0i':[-119.38, 449.1, 10.66],
              'pyi':[31.39, 446.77, 10.76]}
 '''
 
-HOME = {'position':[0.15, 0.12, 0.20],
-        'angle':[pi, 0, 0]}
+HOME_POSE = [0.15, 0.12, 0.20, pi, 0, 0]

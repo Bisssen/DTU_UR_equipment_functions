@@ -1,14 +1,7 @@
 from math import pi
 
-VELOCITY_MEAN_THRESHOLD = 0.001
-
-#VERSION_3_2_MESSAGE_SIZE = 1060
-
+# Used to determine the polyscope version from message length
 MESSAGE_SIZE_TO_VERSION = {'3.0': 1044, '3.2': 1060}
-
-
-IP = '192.38.66.254'
-PORT = 30003
 
 DATA_MAP = {'message_size': 0, 'time': 1,
             'q_b': 2,'q_s': 3, 'q_e': 4, 'q_w1': 5, 'q_w2': 6, 'q_w3': 7,
@@ -20,7 +13,14 @@ DATA_MAP = {'message_size': 0, 'time': 1,
             'x': 74, 'y': 75, 'z': 76, 'rx': 77, 'ry': 78, 'rz': 79,
             'robot_mode': 95, 'status': 132}
 
-# UR5 transform
+# Socket connection parameters
+IP = '192.38.66.254'
+PORT = 30003
+
+# The threshold for determining end of movement for older versions of polyscope
+VELOCITY_MEAN_THRESHOLD = 0.001
+
+# Task to base transform
 TRANSFORM = {'p0i': [-403.50, 242.49, 27.22],
              'pxi': [-405.45, 143.12, 26.68], 
              'pyi': [-303.82, 240.87, 25.87]}
@@ -30,11 +30,9 @@ DH_PARAMETERS = {'a': [0, -0.612, -0.5723, 0, 0, 0],
                  'd': [0.1273, 0, 0, 0.163941, 0.1157, 0.0922], 
                  'alpha': [pi/2, 0, 0, pi/2, -pi/2, 0]}
 
-'''
-# UR3 transform
-TRANSFORM = {'p0i':[-119.38, 449.1, 10.66],
-             'pxi':[-124.4, 232.3, 8.09], 
-             'pyi':[31.39, 446.77, 10.76]}
-'''
+# Home pose for use with home function
+HOME_POSE = [0.15, 0.12, 0.20, 
+             pi, 0, 0]
 
-HOME_POSE = [0.15, 0.12, 0.20, pi, 0, 0]
+# Default task space orientation of the end effector
+DEFAULT_TASK_ORIENTATION = []

@@ -156,7 +156,7 @@ class UR:
     def move(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, 
                    b=0, s=0, e=0, w1=0, w2=0, w3=0, 
                    transform=True, pose=None, mode='linear', 
-                   acc=0.5, speed=0.1, wait=False):
+                   task_orientation=False, acc=0.5, speed=0.1, wait=False):
         if pose:
             if mode[0] == 'l' and transform:
                 pose[:3] = self.transform_task2base(*pose[:3])
@@ -165,6 +165,12 @@ class UR:
             if mode[0] == 'l':
                 if transform:
                     x, y, z = self.transform_task2base(x, y, z)
+                if task_orientation:
+                    if self.task_orientation:
+                        rx, ry, rz = self.task_orientation
+                    else:
+                        print('UR: Default task orientation has not been set.')
+                        return
                 pose_string = f'[{x},{y},{z},{rx},{ry},{rz}]'
             elif mode[0] == 'j':
                 pose_string = f'[{b},{s},{e},{w1},{w2},{w3}]'

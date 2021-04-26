@@ -1,8 +1,10 @@
 from math import pi
 
-# Used to determine the polyscope version from message length
+###             CONSTANTS             ####
+# Used to determine the RealTime version from message length
 MESSAGE_SIZE_TO_VERSION = {'3.0': 1044, '3.2': 1060}
 
+# Mapping of data message to variables
 DATA_MAP = {'message_size': 0, 'time': 1,
             'q_b': 2,'q_s': 3, 'q_e': 4, 'q_w1': 5, 'q_w2': 6, 'q_w3': 7,
             'b': 32, 's': 33, 'e': 34, 'w1': 35, 'w2': 36, 'w3': 37,
@@ -13,11 +15,13 @@ DATA_MAP = {'message_size': 0, 'time': 1,
             'x': 74, 'y': 75, 'z': 76, 'rx': 77, 'ry': 78, 'rz': 79,
             'robot_mode': 95, 'status': 132}
 
+
+###             VARIABLES             ###
 # Socket connection parameters
 IP = '192.38.66.254'
 PORT = 30003
 
-# The threshold for determining end of movement for older versions of polyscope
+# The threshold for determining end of movement for older versions of RealTime
 VELOCITY_MEAN_THRESHOLD = 0.001
 
 # Task to base transform
@@ -35,4 +39,5 @@ HOME_POSE = [0.15, 0.12, 0.20,
              pi, 0, 0]
 
 # Default task space orientation of the end effector
-DEFAULT_TASK_ORIENTATION = []
+# (Does not have to be the same as home pose)
+DEFAULT_TASK_ORIENTATION = [pi, 0, 0]

@@ -38,6 +38,13 @@ class UR:
         else:
             print('UR: "DH_PARAMETERS" have not been set: forward kinematics are not available.')
 
+        # The denavit hartenberg parameters to find forward kinematics
+        self.task_orientation = None
+        if DEFAULT_TASK_ORIENTATION in config_ur.__dict__:
+            self.set_task_orientation(config_ur.DEFAULT_TASK_ORIENTATION)
+        else:
+            print('UR: "DEFAULT_TASK_ORIENTATION" have not been set: default orientation in home function not available.')
+
         # Dictionary containing all the ur data which have been reading
         self.ur_data = {}
 
@@ -105,6 +112,9 @@ class UR:
 
     def set_dh_parameters(self, a, d, alpha):
         self.dh = DH(a=a, d=d, alpha=alpha)
+
+    def set_task_orientation(self, orientation):
+        self.task_orientation = orientation
 
     def get_position(self, world=True):
         x, y, z, _, _, _ = self.get_pose()

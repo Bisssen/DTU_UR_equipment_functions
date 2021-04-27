@@ -158,7 +158,7 @@ class UR:
 
     def move(self, x=None, y=None, z=None, rx=None, ry=None, rz=None, 
                    b=None, s=None, e=None, w1=None, w2=None, w3=None, 
-                   transform=True, pose=None, mode='linear', relative=False,
+                   pose=None, mode='linear', transform=True, relative=False,
                    acc=0.5, speed=0.1, wait=False):
         if mode[0] not in ['l', 'j']:
             print('UR: "mode" must be either \'l\', \'linear\', \'j\' or \'joint\'')
@@ -214,18 +214,25 @@ class UR:
 
     def speed(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, 
                     b=0, s=0, e=0, w1=0, w2=0, w3=0, 
-                    pose=None, mode='linear', 
+                    pose=None, mode='linear', transform=True,
                     acc=0.5, time=1, wait=False):
         if pose:
-            pose_string = f'{pose}'
+            if len(pose) != 6:
+                print('UR: "pose" must consist of exactly 6 values.')
+                return
         else:
             if mode[0] == 'l':
-                pose_string = f'[{x},{y},{z},{rx},{ry},{rz}]'
+                pose = [x, y, z, rx, ry, rz]
             elif mode[0] == 'j':
-                pose_string = f'[{b},{s},{e},{w1},{w2},{w3}]'
+                pose = [b, s, e, w1, w2, w3]
 
-        self.socket.send((f'speed{mode[0]}({pose_string},{acc},{time})\n').encode())
+        if transform and mode[0] == 'l':
+            t = self.task_transform[:3,3]
+            v_task = np.array([x, y, z, 1])
+            v_base = T.dot(v_task)
+            pose[:3] = v_base[:3] - t
 
+        self.socket.send((f'speed{mode[0]}({pose},{acc},{time})\n').encode())
         if wait:
             self.wait()
 

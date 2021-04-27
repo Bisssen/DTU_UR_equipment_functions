@@ -39,11 +39,11 @@ class UR:
             print('UR: "DH_PARAMETERS" have not been set: forward kinematics are not available.')
 
         # The denavit hartenberg parameters to find forward kinematics
-        self.task_orientation = None
-        if DEFAULT_TASK_ORIENTATION in config_ur.__dict__:
-            self.set_task_orientation(config_ur.DEFAULT_TASK_ORIENTATION)
+        self.default_orientation = None
+        if DEFAULT_ORIENTATION in config_ur.__dict__:
+            self.set_default_orientation(config_ur.DEFAULT_ORIENTATION)
         else:
-            print('UR: "DEFAULT_TASK_ORIENTATION" have not been set: default orientation in home function not available.')
+            print('UR: "DEFAULT_ORIENTATION" have not been set: default orientation in home function not available.')
 
         # Dictionary containing all the ur data which have been reading
         self.ur_data = {}
@@ -113,8 +113,8 @@ class UR:
     def set_dh_parameters(self, a, d, alpha):
         self.dh = DH(a=a, d=d, alpha=alpha)
 
-    def set_task_orientation(self, orientation):
-        self.task_orientation = orientation
+    def set_default_orientation(self, orientation):
+        self.default_orientation = orientation
 
     def set_home(self, pose):
         self.home_pose = pose
@@ -172,12 +172,12 @@ class UR:
             if mode[0] == 'l':
                 if None in [x, y, z, rx, ry, rz]:
                     print('UR: "x", "y", "z", "rx", "ry" and "rz" must all be defined when not using "pose".')
-                    return 
+                    return
                 if None in [rx, ry, rz]:
-                    if self.task_orientation:
-                        rx, ry, rz = self.task_orientation
+                    if self.default_orientation:
+                        rx, ry, rz = self.default_orientation
                     else:
-                        print('UR: Default task orientation has not been set.')
+                        print('UR: Default orientation has not been set.')
                         return
                 pose = [x, y, z, rx, ry, rz]
             elif mode[0] == 'j':

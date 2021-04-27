@@ -116,6 +116,9 @@ class UR:
     def set_task_orientation(self, orientation):
         self.task_orientation = orientation
 
+    def set_home(self, pose):
+        self.home_pose = pose
+
     def get_position(self, world=True):
         x, y, z, _, _, _ = self.get_pose()
         if world:
@@ -197,28 +200,17 @@ class UR:
         if wait:
             self.wait()
 
-    def move_relative(self, dx=0, dy=0, dz=0, drx=0, dry=0, drz=0, 
-                            db=0, ds=0, de=0, dw1=0, dw2=0, dw3=0, 
-                            mode='linear', acc=1, speed=0.1, wait=False):
-        if mode[0] == 'l':
-            x, y, z, rx, ry, rz = self.get_pose()
-            self.move(x=x + dx, y=y + dy, z=z + dz,
-                      rx=rx + drx, ry=ry + dry, rz=rz + drz,
-                      mode=mode, acc=acc, speed=speed, 
-                      transform=False, wait=wait)
-
-        elif mode[0] == 'j':
-            b, s, e, w1, w2, w3 = self.get_joints()
-            self.move(b=b + db, s=s + ds, e=e + de,
-                      w1=w1 + dw1, w2=w2 + dw2, w3=w3 + dw3,
-                      mode=mode, acc=acc, speed=speed, 
-                      transform=False, wait=wait)
-
     def move_tool(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, acc=1, speed=0.1,
                   wait=False):
         self.socket.send((f'movel(pose_trans(get_forward_kin(),p[{x},{y},{z},{rx},{ry},{rz}]),{acc},{speed})\n').encode())
         if wait:
             self.wait()
+
+    def home(self):
+        if self.home_pose:
+            self.move(pose=self.home_pose)
+        else:
+            print('UR: Home pose has not been set.')
 
     def speed(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, 
                     b=0, s=0, e=0, w1=0, w2=0, w3=0, 
@@ -259,15 +251,6 @@ class UR:
             print('UR: DH parameters have not been set.')
             return None
 
-    def set_home(self, pose):
-        self.home_pose = pose
-
-    def home(self):
-        if self.home_pose:
-            self.move(pose=self.home_pose)
-        else:
-            print('UR: Home pose has not been set.')
-
     def read(self):
         data = self.communication_thread.data
         # Removing last entry: empty due to fenceposting in sending process
@@ -275,6 +258,14 @@ class UR:
         for item in data_split:
             data_point, data_value = item.split(':')
             self.ur_data[data_point] = float(data_value)
+
+    def moving_average(self, signal, new_point):
+        if new_point > 1e5:
+            new_point = 0
+        new_signal = signal[1:] + [new_point]
+        average = sum(new_signal)/len(new_signal)
+
+        return new_signal, average
 
     def wait(self):
         # Hold-off to let the robot start movement before using data
@@ -320,14 +311,6 @@ class UR:
                 
                 if total_mean_velocity < config_ur.VELOCITY_MEAN_THRESHOLD * 6:
                     break
-
-    def moving_average(self, signal, new_point):
-        if new_point > 1e5:
-            new_point = 0
-        new_signal = signal[1:] + [new_point]
-        average = sum(new_signal)/len(new_signal)
-
-        return new_signal, average
 
     def send_line(self, _str):
         if type(_str) is str:

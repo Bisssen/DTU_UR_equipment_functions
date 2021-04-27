@@ -72,7 +72,7 @@ class UR:
         while len(self.ur_data) == 0:
             self.read()
         
-        print('UR: UR has been initiated.')
+        print('UR: UR is ready.')
 
     def set_task_transform(self, p0i, pxi, pyi):
         p0 = np.array(p0i)
@@ -336,7 +336,7 @@ class DH:
         self.a = a
         self.d = d
         self.alpha = alpha
-    
+
     def calculate_forward_kinematics(self, joints):
         # Calculates forward kinematics for the robot based on joint values
         T = np.identity(4)

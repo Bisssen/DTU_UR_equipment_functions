@@ -153,29 +153,47 @@ class UR:
         w3 = self.ur_data['w3']
         return [b, s, e, w1, w2, w3]
 
-    def move(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, 
-                   b=0, s=0, e=0, w1=0, w2=0, w3=0, 
-                   transform=True, pose=None, mode='linear', 
-                   use_default_orientation=False, acc=0.5, speed=0.1, wait=False):
+    def move(self, x=None, y=None, z=None, rx=None, ry=None, rz=None, 
+                   b=None, s=None, e=None, w1=None, w2=None, w3=None, 
+                   transform=True, pose=None, mode='linear', relative=False,
+                   acc=0.5, speed=0.1, wait=False):
+        if mode[0] not in ['l', 'j']:
+            print('UR: "mode" must be either \'l\', \'linear\', \'j\' or \'joint\'')
+            return
+
         if pose:
-            if mode[0] == 'l' and transform:
-                pose[:3] = self.transform_task2base(*pose[:3])
-            pose_string = str(pose)
+            if len(pose) != 6:
+                print('UR: "pose" must consist of exactly 6 values.')
+                return
         else:
             if mode[0] == 'l':
-                if transform:
-                    x, y, z = self.transform_task2base(x, y, z)
-                if use_default_orientation:
+                if None in [x, y, z, rx, ry, rz]:
+                    print('UR: "x", "y", "z", "rx", "ry" and "rz" must all be defined when not using "pose".')
+                    return 
+                if None in [rx, ry, rz]:
                     if self.task_orientation:
                         rx, ry, rz = self.task_orientation
                     else:
                         print('UR: Default task orientation has not been set.')
                         return
-                pose_string = f'[{x},{y},{z},{rx},{ry},{rz}]'
+                pose = [x, y, z, rx, ry, rz]
             elif mode[0] == 'j':
-                pose_string = f'[{b},{s},{e},{w1},{w2},{w3}]'
+                if None in [b, s, e, w1, w2, w3]:
+                    print('UR: "b", "s", "e", "w1", "w2" and "w3" must all be defined when not using "pose".')
+                    return
+                pose = [b, s, e, w1, w2, w3]
 
-        self.socket.send((f'move{mode[0]}({pose_string},{acc},{speed})\n').encode())
+        if transform and mode[0] == 'l':
+            pose[:3] = self.transform_task2base(*pose[:3])
+
+        if relative:
+            if mode[0] == 'l':
+                current_pose = np.asarray(self.get_pose())
+            if mode[0] == 'j':
+                current_pose = np.asarray(self.get_joints())
+            pose = (np.asarray(pose) + current_pose).tolist()
+
+        self.socket.send((f'move{mode[0]}({pose},{acc},{speed})\n').encode())
         if wait:
             self.wait()
 
@@ -229,6 +247,9 @@ class UR:
 
         # TODO: Test built-in pose_trans for speed_tool
         # send_string = f'movel(pose_trans(get_forward_kin(),p[{x},{y},{z},{rx},{ry},{rz}]),{acc},{speed})\n'
+
+    def stop(self, acc=5, mode='linear'):
+        self.socket.send((f'stop{mode[0]}({acc})\n').encode())
 
     def get_forward_kinematics(self):
         if self.dh:

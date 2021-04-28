@@ -32,7 +32,7 @@ class communication_thread():
         self.receive_thread = threading.Thread(target=self.receive)
 
         # Starting the Thread
-        print('    Starting communication thread...')
+        print('UR: Starting communication thread...')
         self.receive_thread.start()
 
     def receive(self):

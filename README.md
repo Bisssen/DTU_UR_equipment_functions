@@ -28,7 +28,7 @@ Functionality has been implemented to work in a task frame instead of working in
     1. **p0i**, task frame origin.
     2. **pxi**, a point along the x-axis.
     3. **pyi**, a point along the y-axis.
-2. Either input these three points in the **TRANSFORM** dictionary in the **config_robot.py** configuration file or manually conduct the initialization of the transformation using the **UR** object function **transform_init** and inputting these three points as arguments.
+2. Either input these three points in the **TRANSFORM** dictionary in the **config_ur.py** configuration file or manually conduct the initialization of the transformation using the **UR** object function **transform_init** and inputting these three points as arguments.
 
 ### Reading robot data
 In the UR configuration file, **config_ur.py**, the data to be read from the robot server is given by the dictionary **DATA_MAP**. This chosen data from this map is non-exhaustive, and depending on the robot server's software version more data can be managed. The source for reading and understanding the read data is from UR's own site: https://www.universal-robots.com/articles/ur/remote-control-via-tcpip/. A downloadable Excel sheet contains the necessary information about which bytes contain which robot information.

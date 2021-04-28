@@ -1,5 +1,5 @@
 import time
-from math import pi
+from math import pi, cos, sin
 import numpy as np
 import socket
 import sys
@@ -15,7 +15,7 @@ class UR:
 
         # Transformation to task
         self.task_transform = None
-        if TRANSFORM in config_ur.__dict__:
+        if 'TRANSFORM' in config_ur.__dict__:
             self.set_task_transform(config_ur.TRANSFORM['p0i'],
                                     config_ur.TRANSFORM['pxi'],
                                     config_ur.TRANSFORM['pyi'])
@@ -24,26 +24,17 @@ class UR:
 
         # The default pose of the end effector
         self.home_pose = None
-        if HOME_POSE in config_ur.__dict__:
+        if 'HOME_POSE' in config_ur.__dict__:
             self.set_home(pose=config_ur.HOME_POSE)
         else:
             print('UR: "HOME_POSE" has not been set: home functionality is not available.')
 
         # The denavit hartenberg parameters to find forward kinematics
-        self.dh = None
-        if DH_PARAMETERS in config_ur.__dict__:
-            self.set_dh_parameters(config_ur.DH_PARAMETERS['a'],
-                                   config_ur.DH_PARAMETERS['d'],
-                                   config_ur.DH_PARAMETERS['alpha'])
-        else:
-            print('UR: "DH_PARAMETERS" have not been set: forward kinematics are not available.')
-
-        # The denavit hartenberg parameters to find forward kinematics
         self.default_orientation = None
-        if DEFAULT_ORIENTATION in config_ur.__dict__:
+        if 'DEFAULT_ORIENTATION' in config_ur.__dict__:
             self.set_default_orientation(config_ur.DEFAULT_ORIENTATION)
         else:
-            print('UR: "DEFAULT_ORIENTATION" have not been set: default orientation in home function not available.')
+            print('UR: "DEFAULT_ORIENTATION" has not been set: default orientation in home function not available.')
 
         # Dictionary containing all the ur data which have been reading
         self.ur_data = {}
@@ -90,17 +81,21 @@ class UR:
         
         self.task_transform = np.identity(4)
         self.task_transform[:3,:3] = np.transpose( np.array([vx, vy, vz]) )
-        self.task_transform[:3] = p0
+        self.task_transform[:3,3] = p0
 
-    def transform_base2task(self, x, y, z):
-        if self.task_transform:
+        self.rot_mat = np.array([vx, vy, vz])
+        self.rot_mat = np.transpose(self.rot_mat)
+        self.origin = p0
+
+    def transform_task2base(self, x, y, z):
+        if self.task_transform is not None:
             return self.task_transform.dot( [x, y, z, 1] )[:3]
         else:
             print('UR: Task transform has not been set.')
             return None
 
-    def transform_task2base(self, x, y, z):
-        if self.task_transform:
+    def transform_base2task(self, x, y, z):
+        if self.task_transform is not None:
             return np.linalg.inv(self.task_transform).dot( [x, y, z, 1] )[:3]
         else:
             print('UR: Task transform has not been set.')
@@ -109,9 +104,6 @@ class UR:
     def set_tcp(self, x=0, y=0, z=0, rx=0, ry=0, rz=0):
         self.socket.send((f'set_tcp(p[{x},{y},{z},{rx},{ry},{rz}])\n').encode())
         time.sleep(0.1)
-
-    def set_dh_parameters(self, a, d, alpha):
-        self.dh = DH(a=a, d=d, alpha=alpha)
 
     def set_default_orientation(self, orientation):
         self.default_orientation = orientation
@@ -169,34 +161,51 @@ class UR:
                 print('UR: "pose" must consist of exactly 6 values.')
                 return
         else:
-            if mode[0] == 'l':
-                if None in [x, y, z, rx, ry, rz]:
-                    print('UR: "x", "y", "z", "rx", "ry" and "rz" must all be defined when not using "pose".')
-                    return
-                if None in [rx, ry, rz]:
-                    if self.default_orientation:
-                        rx, ry, rz = self.default_orientation
-                    else:
-                        print('UR: Default orientation has not been set.')
+            if relative:
+                if mode[0] == 'l':
+                    pose = [x, y, z, rx, ry, rz]
+                elif mode[0] == 'j':
+                    pose = [b, s, e, w1, w2, w3]
+                pose = [0 if v is None else v for v in pose]
+            else:
+                if mode[0] == 'l':
+                    if None in [rx, ry, rz]:
+                        if self.default_orientation:
+                            rx, ry, rz = self.default_orientation
+                        else:
+                            print('UR: Default orientation has not been set.')
+                            return
+                    if None in [x, y, z, rx, ry, rz]:
+                        print('UR: "x", "y", "z" must all be defined when not using "pose".')
+                        print('    "rx", "ry" and "rz" must either be defined or default orientation be used.')
                         return
-                pose = [x, y, z, rx, ry, rz]
-            elif mode[0] == 'j':
-                if None in [b, s, e, w1, w2, w3]:
-                    print('UR: "b", "s", "e", "w1", "w2" and "w3" must all be defined when not using "pose".')
-                    return
-                pose = [b, s, e, w1, w2, w3]
-
-        if transform and mode[0] == 'l':
-            pose[:3] = self.transform_task2base(*pose[:3])
+                    pose = [x, y, z, rx, ry, rz]
+                elif mode[0] == 'j':
+                    if None in [b, s, e, w1, w2, w3]:
+                        print('UR: "b", "s", "e", "w1", "w2" and "w3" must all be defined when not using "pose".')
+                        return
+                    pose = [b, s, e, w1, w2, w3]
 
         if relative:
             if mode[0] == 'l':
                 current_pose = np.asarray(self.get_pose())
-            if mode[0] == 'j':
+            elif mode[0] == 'j':
                 current_pose = np.asarray(self.get_joints())
-            pose = (np.asarray(pose) + current_pose).tolist()
 
-        self.socket.send((f'move{mode[0]}({pose},{acc},{speed})\n').encode())
+            if transform and mode[0] == 'l':
+                current_pos = np.asarray(self.transform_base2task(*current_pose[:3]))
+                pose[:3] = (current_pos + np.asarray(pose[:3])).tolist()
+                pose[:3] = self.transform_task2base(*pose[:3])
+                pose[3:] = current_pose[3:].tolist()
+            else:
+                pose = (np.asarray(pose) + current_pose).tolist()
+        else:
+            if transform and mode[0] == 'l':
+                pose[:3] = self.transform_task2base(*pose[:3])
+
+        print(f'move{mode[0]}({pose},{acc},{speed})\n')
+
+        self.socket.send((f'move{mode[0]}(p{pose},{acc},{speed})\n').encode())
         if wait:
             self.wait()
 
@@ -206,9 +215,9 @@ class UR:
         if wait:
             self.wait()
 
-    def home(self):
+    def home(self, acc=0.5, speed=0.1, wait=False):
         if self.home_pose:
-            self.move(pose=self.home_pose)
+            self.move(pose=self.home_pose, acc=acc, speed=speed, wait=wait)
         else:
             print('UR: Home pose has not been set.')
 
@@ -229,7 +238,7 @@ class UR:
         if transform and mode[0] == 'l':
             t = self.task_transform[:3,3]
             v_task = np.array([x, y, z, 1])
-            v_base = T.dot(v_task)
+            v_base = self.task_transform.dot(v_task)
             pose[:3] = v_base[:3] - t
 
         self.socket.send((f'speed{mode[0]}({pose},{acc},{time})\n').encode())
@@ -244,19 +253,14 @@ class UR:
         v_speed = v_base[:3] - t
         self.speed(x=v_speed[0], y=v_speed[1], z=v_speed[2], acc=acc, time=time)
 
-        # TODO: Test built-in pose_trans for speed_tool
-        # send_string = f'movel(pose_trans(get_forward_kin(),p[{x},{y},{z},{rx},{ry},{rz}]),{acc},{speed})\n'
-
-    def stop(self, acc=5, mode='linear'):
+    def stop(self, acc=5, mode='linear', wait=False):
         self.socket.send((f'stop{mode[0]}({acc})\n').encode())
+        if wait:
+            self.wait()
 
     def get_forward_kinematics(self):
-        if self.dh:
-            joints = self.get_joints()
-            return self.dh.calculate_forward_kinematics(joints)
-        else:
-            print('UR: DH parameters have not been set.')
-            return None
+        pose = self.get_pose()
+        return pose_to_transmat(self.get_pose())
 
     def read(self):
         data = self.communication_thread.data
@@ -347,3 +351,27 @@ class DH:
                             [0,               0,                                    0,                                   1                         ]])
             T = np.matmul(T, M_i)
         return T
+
+
+def rodrigues_vec_to_rotation_mat(rodrigues_vec):
+    theta = np.linalg.norm(rodrigues_vec)
+    if theta < sys.float_info.epsilon:              
+        rotation_mat = np.eye(3, dtype=float)
+    else:
+        r = rodrigues_vec / theta
+        r0, r1, r2 = r
+        I = np.eye(3, dtype=float)
+        r_rT = np.array([[r0*r0, r0*r1, r0*r2],
+                         [r1*r0, r1*r1, r1*r2],
+                         [r2*r0, r2*r1, r2*r2]])
+        r_cross = np.array([[0, -r2, r1],
+                            [r2, 0, -r0],
+                            [-r1, r0, 0]])
+        rotation_mat = cos(theta) * I + (1 - cos(theta)) * r_rT + sin(theta) * r_cross
+    return rotation_mat
+
+def pose_to_transmat(pose):
+    M = np.identity(4) # initialize
+    M[:3,:3] = rodrigues_vec_to_rotation_mat(pose[3:]) # rotation part
+    M[:3,3] = np.transpose(pose[:3]) # translation part
+    return M

@@ -18,26 +18,21 @@ DATA_MAP = {'message_size': 0, 'time': 1,
 
 ###             VARIABLES             ###
 # Socket connection parameters
-IP = '192.38.66.254'
+IP = '192.38.66.226'
 PORT = 30003
 
 # The threshold for determining end of movement for older versions of RealTime
 VELOCITY_MEAN_THRESHOLD = 0.001
 
 # Task to base transform
-TRANSFORM = {'p0i': [-403.50, 242.49, 27.22],
-             'pxi': [-405.45, 143.12, 26.68], 
-             'pyi': [-303.82, 240.87, 25.87]}
-
-# Denavit Hartenberg parameters (can be found on UR website)
-DH_PARAMETERS = {'a': [0, -0.612, -0.5723, 0, 0, 0],
-                 'd': [0.1273, 0, 0, 0.163941, 0.1157, 0.0922], 
-                 'alpha': [pi/2, 0, 0, pi/2, -pi/2, 0]}
+TRANSFORM = {'p0i':[500.08, -630.98, 15.56],
+             'pxi':[500.98, -531.09, 15.06], 
+             'pyi':[400.15, -629.81, 14.90]}
 
 # Home pose for use with home function
-HOME_POSE = [0.15, 0.12, 0.20, 
+HOME_POSE = [0.15, 0.12, 0.35, 
              pi, 0, 0]
 
 # Default task space orientation of the end effector
 # (Does not have to be the same as home pose)
-DEFAULT_TASK_ORIENTATION = [pi, 0, 0]
+DEFAULT_ORIENTATION = [pi, 0, 0]

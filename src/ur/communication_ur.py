@@ -29,7 +29,7 @@ class communication_thread():
         self.message_size = self.get_message_size()
 
         # The thread which keeps receiving data
-        self.receive_thread = threading.Thread(target=self.receive)
+        self.receive_thread = threading.Thread(target=self.receive, deamon=True)
 
         # Starting the Thread
         print('UR: Starting communication thread...')

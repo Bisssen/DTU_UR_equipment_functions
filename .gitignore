@@ -137,3 +137,4 @@ home.py
 move.py
 gripperclose.py
 gripperopen.py
+.vscode/settings.json

@@ -152,6 +152,18 @@ class UR:
                    b=None, s=None, e=None, w1=None, w2=None, w3=None, 
                    pose=None, mode='linear', transform=True, relative=False,
                    acc=0.5, speed=0.1, wait=False):
+        pose = self.generate_move(x, y, z, rx, ry, rz,
+                                  b, s, e, w1, w2, w3,
+                                  pose, mode, transform, relative)
+
+        print(f'move{mode[0]}({pose},{acc},{speed})\n')
+        self.socket.send((f'move{mode[0]}(p{pose},{acc},{speed})\n').encode())
+        if wait:
+            self.wait()    
+    
+    def generate_move(self, x=None, y=None, z=None, rx=None, ry=None, rz=None, 
+                      b=None, s=None, e=None, w1=None, w2=None, w3=None, 
+                      pose=None, mode='linear', transform=True, relative=False):
         if mode[0] not in ['l', 'j']:
             print('UR: "mode" must be either \'l\', \'linear\', \'j\' or \'joint\'')
             return
@@ -203,11 +215,43 @@ class UR:
             if transform and mode[0] == 'l':
                 pose[:3] = self.transform_task2base(*pose[:3])
 
-        print(f'move{mode[0]}({pose},{acc},{speed})\n')
+        return mode, pose
 
-        self.socket.send((f'move{mode[0]}(p{pose},{acc},{speed})\n').encode())
+    # Poses must contain the 6 positions and
+    # a mode in the form linear, l or joint, j
+    def path(self, poses, transform=True, relative=False,
+             acc=0.5, speed=0.1, wait=False):
+        # List containing all the valid data
+        data = []
+        # Convert the poses to the correct data
+        for pose in poses:
+            if pose[6][0] == 'l':
+                data.append(self.generate_move(x=pose[0], y=pose[1], z=pose[2],
+                                               rx=pose[3], ry=pose[4], rz=pose[5],
+                                               mode=pose[6], transform=transform,
+                                               relative=relative))
+            elif pose[6][0] == 'j':
+                data.append(self.generate_move(b=pose[0], s=pose[1], e=pose[2],
+                                               w1=pose[3], w2=pose[4], w3=pose[5],
+                                               mode=pose[6], transform=transform,
+                                               relative=relative))
+            else:
+                print('UR: "mode" must be either \'l\', \'linear\', \'j\' or \'joint\'')
+                return
+
+        # Send the actual commands that needs to be sent to move the path
+        # Start of the function
+        send_string = 'def follow_path():\n'
+
+        for pose in data:
+            send_string += f'    move{mode[0]}(p{pose},{acc},{speed}),r=0.1)\n'
+        
+        send_string += 'end\n
+        self.socket.send(send_string)
         if wait:
             self.wait()
+
+        
 
     def move_tool(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, acc=1, speed=0.1,
                   wait=False):

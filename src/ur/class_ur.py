@@ -215,7 +215,7 @@ class UR:
             if transform and mode[0] == 'l':
                 pose[:3] = self.transform_task2base(*pose[:3])
 
-        return mode, pose
+        return pose
 
     # Poses must contain the 6 positions and
     # a mode in the form linear, l or joint, j
@@ -223,18 +223,21 @@ class UR:
              acc=0.5, speed=0.1, wait=False):
         # List containing all the valid data
         data = []
+
         # Convert the poses to the correct data
         for pose in poses:
+            if pose[7] is None:
+                pose[7] = 0.001
             if pose[6][0] == 'l':
-                data.append(self.generate_move(x=pose[0], y=pose[1], z=pose[2],
-                                               rx=pose[3], ry=pose[4], rz=pose[5],
-                                               mode=pose[6], transform=transform,
-                                               relative=relative))
+                data.append([self.generate_move(x=pose[0], y=pose[1], z=pose[2],
+                                                rx=pose[3], ry=pose[4], rz=pose[5],
+                                                mode=pose[6], transform=transform,
+                                                relative=relative), 'l', pose[7]])
             elif pose[6][0] == 'j':
-                data.append(self.generate_move(b=pose[0], s=pose[1], e=pose[2],
-                                               w1=pose[3], w2=pose[4], w3=pose[5],
-                                               mode=pose[6], transform=transform,
-                                               relative=relative))
+                data.append([self.generate_move(b=pose[0], s=pose[1], e=pose[2],
+                                                w1=pose[3], w2=pose[4], w3=pose[5],
+                                                mode=pose[6], transform=transform,
+                                                relative=relative), 'j', pose[7]])
             else:
                 print('UR: "mode" must be either \'l\', \'linear\', \'j\' or \'joint\'')
                 return
@@ -244,10 +247,11 @@ class UR:
         send_string = 'def follow_path():\n'
 
         for pose in data:
-            send_string += f'    move{mode[0]}(p{pose},{acc},{speed}),r=0.1)\n'
+            send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={pose[2]})\n'
         
-        send_string += 'end\n
-        self.socket.send(send_string)
+        send_string += 'end\n'
+        print(send_string)
+        self.send_line(send_string)
         if wait:
             self.wait()
 

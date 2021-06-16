@@ -156,8 +156,11 @@ class UR:
                                   b, s, e, w1, w2, w3,
                                   pose, mode, transform, relative)
 
-        print(f'move{mode[0]}({pose},{acc},{speed})\n')
-        self.socket.send((f'move{mode[0]}(p{pose},{acc},{speed})\n').encode())
+        print(f'move{mode[0]}(p{pose},{acc},{speed})\n')
+        if mode[0] == 'j':
+            self.socket.send((f'move{mode[0]}({pose},{acc},{speed})\n').encode())
+        else:
+            self.socket.send((f'move{mode[0]}(p{pose},{acc},{speed})\n').encode())
         if wait:
             self.wait()    
     
@@ -247,8 +250,11 @@ class UR:
         send_string = 'def follow_path():\n'
 
         for pose in data:
-            send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={pose[2]})\n'
-        
+            if pose[1] == 'j':
+                send_string += f'    move{pose[1]}({pose[0]},{acc},{speed},r={pose[2]})\n'
+            else:
+                send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={pose[2]})\n'
+
         send_string += 'end\n'
         print(send_string)
         self.send_line(send_string)

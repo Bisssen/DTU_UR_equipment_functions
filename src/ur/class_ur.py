@@ -128,7 +128,7 @@ class UR:
             z = self.ur_data['z_actual']
             rx = self.ur_data['rx_actual']
             ry = self.ur_data['ry_actual']
-            rz_current = self.ur_data['rz_actual']
+            rz = self.ur_data['rz_actual']
         else:
             x = self.ur_data['x']
             y = self.ur_data['y']

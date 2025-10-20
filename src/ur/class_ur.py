@@ -6,10 +6,12 @@ import sys
 
 from . import config_ur
 from .communication_ur import communication_thread
+from ..ros2.node import URNode
 
 
 class UR:
-    def __init__(self, ip=None, port=None):
+    def __init__(self, node: URNode, ip=None, port=None):
+        self.node = node
         # Whether the program is run in python 2 or not
         self.python_2 = (sys.version_info.major == 2)
 
@@ -20,21 +22,21 @@ class UR:
                                     config_ur.TRANSFORM['pxi'],
                                     config_ur.TRANSFORM['pyi'])
         else:
-            print('UR: "TRANSFORM" has not been set: task2base and base2task transforms are not available.')
+            self.node.get_logger().info('UR: "TRANSFORM" has not been set: task2base and base2task transforms are not available.')
 
         # The default pose of the end effector
         self.home_pose = None
         if 'HOME_POSE' in config_ur.__dict__:
             self.set_home(pose=config_ur.HOME_POSE)
         else:
-            print('UR: "HOME_POSE" has not been set: home functionality is not available.')
+            self.node.get_logger().info('UR: "HOME_POSE" has not been set: home functionality is not available.')
 
         # The denavit hartenberg parameters to find forward kinematics
         self.default_orientation = None
         if 'DEFAULT_ORIENTATION' in config_ur.__dict__:
             self.set_default_orientation(config_ur.DEFAULT_ORIENTATION)
         else:
-            print('UR: "DEFAULT_ORIENTATION" has not been set: default orientation in home function not available.')
+            self.node.get_logger().info('UR: "DEFAULT_ORIENTATION" has not been set: default orientation in home function not available.')
 
         # Dictionary containing all the ur data which have been reading
         self.ur_data = {}
@@ -57,13 +59,14 @@ class UR:
         # Connect to the UR arm
         self.socket.connect((self.ip, self.port))
         # Starting communication script
+        # THIS IS NOT a thread anymore
         self.communication_thread = communication_thread(self.ip, self.port)
 
         # Make sure that the communication thread have started receiving data
         while len(self.ur_data) == 0:
             self.read()
         
-        print('UR: UR is ready.')
+        self.node.get_logger().info('UR: UR is ready.')
 
     def set_task_transform(self, p0i, pxi, pyi):
         p0 = np.array(p0i)
@@ -91,14 +94,14 @@ class UR:
         if self.task_transform is not None:
             return self.task_transform.dot( [x, y, z, 1] )[:3]
         else:
-            print('UR: Task transform has not been set.')
+            self.node.get_logger().info('UR: Task transform has not been set.')
             return None
 
     def transform_base2task(self, x, y, z):
         if self.task_transform is not None:
             return np.linalg.inv(self.task_transform).dot( [x, y, z, 1] )[:3]
         else:
-            print('UR: Task transform has not been set.')
+            self.node.get_logger().info('UR: Task transform has not been set.')
             return None
 
     def set_tcp(self, x=0, y=0, z=0, rx=0, ry=0, rz=0):
@@ -168,12 +171,12 @@ class UR:
                       b=None, s=None, e=None, w1=None, w2=None, w3=None, 
                       pose=None, mode='linear', transform=True, relative=False):
         if mode[0] not in ['l', 'j']:
-            print('UR: "mode" must be either \'l\', \'linear\', \'j\' or \'joint\'')
+            self.node.get_logger().error('UR: "mode" must be either \'l\', \'linear\', \'j\' or \'joint\'')
             return
 
         if pose:
             if len(pose) != 6:
-                print('UR: "pose" must consist of exactly 6 values.')
+                self.node.get_logger().error('UR: "pose" must consist of exactly 6 values.')
                 return
         else:
             if relative:
@@ -188,16 +191,16 @@ class UR:
                         if self.default_orientation:
                             rx, ry, rz = self.default_orientation
                         else:
-                            print('UR: Default orientation has not been set.')
+                            self.node.get_logger().error('UR: Default orientation has not been set.')
                             return
                     if None in [x, y, z, rx, ry, rz]:
-                        print('UR: "x", "y", "z" must all be defined when not using "pose".')
-                        print('    "rx", "ry" and "rz" must either be defined or default orientation be used.')
+                        self.node.get_logger().error('UR: "x", "y", "z" must all be defined when not using "pose".')
+                        self.node.get_logger().error('    "rx", "ry" and "rz" must either be defined or default orientation be used.')
                         return
                     pose = [x, y, z, rx, ry, rz]
                 elif mode[0] == 'j':
                     if None in [b, s, e, w1, w2, w3]:
-                        print('UR: "b", "s", "e", "w1", "w2" and "w3" must all be defined when not using "pose".')
+                        self.node.get_logger().error('UR: "b", "s", "e", "w1", "w2" and "w3" must all be defined when not using "pose".')
                         return
                     pose = [b, s, e, w1, w2, w3]
 
@@ -242,7 +245,7 @@ class UR:
                                                 mode=pose[6], transform=transform,
                                                 relative=relative), 'j', pose[7]])
             else:
-                print('UR: "mode" must be either \'l\', \'linear\', \'j\' or \'joint\'')
+                self.node.get_logger().error('UR: "mode" must be either \'l\', \'linear\', \'j\' or \'joint\'')
                 return
 
         # Send the actual commands that needs to be sent to move the path
@@ -256,7 +259,7 @@ class UR:
                 send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={pose[2]})\n'
 
         send_string += 'end\n'
-        print(send_string)
+
         self.send_line(send_string)
         if wait:
             self.wait()
@@ -273,7 +276,7 @@ class UR:
         if self.home_pose:
             self.move(pose=self.home_pose, acc=acc, speed=speed, wait=wait)
         else:
-            print('UR: Home pose has not been set.')
+            self.node.get_logger().error('UR: Home pose has not been set.')
 
     def speed(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, 
                     b=0, s=0, e=0, w1=0, w2=0, w3=0, 
@@ -281,7 +284,7 @@ class UR:
                     acc=0.5, time=1, wait=False):
         if pose:
             if len(pose) != 6:
-                print('UR: "pose" must consist of exactly 6 values.')
+                self.node.get_logger().error('UR: "pose" must consist of exactly 6 values.')
                 return
         else:
             if mode[0] == 'l':
@@ -383,7 +386,7 @@ class UR:
         elif type(_str) is bytes:
             self.socket.send(_str)
         else:
-            print('UR: Input to send_line must be of type str or type bytes')
+            self.node.get_logger().error('UR: Input to send_line must be of type str or type bytes')
 
     def shutdown(self):
         self.communication_thread.shutdown()

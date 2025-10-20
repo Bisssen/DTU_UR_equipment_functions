@@ -1,8 +1,6 @@
 import socket
 import struct
-import threading
 import sys
-import time
 
 from . import config_ur
 
@@ -18,6 +16,8 @@ class communication_thread():
 
         self.socket.connect((ip, port))
 
+        self.socket.setblocking(0)
+
         # The thread keeps going as long as this variable is true
         self.running = True
 
@@ -28,24 +28,17 @@ class communication_thread():
         self.message_size = float('inf')
         self.message_size = self.get_message_size()
 
-        # The thread which keeps receiving data
-        self.receive_thread = threading.Thread(target=self.receive, daemon=True)
-
-        # Starting the Thread
-        print('UR: Starting communication thread...')
-        self.receive_thread.start()
-
     def receive(self):
-        while self.running:
+        try:
             data = (self.socket.recv(2048))
-            data = self.transform_data(data)
-            # If no error occurred then update data
-            if not data == -4444:
-                self.data = data
+        except BlockingIOError:
+            return
+        data = self.transform_data(data)
+        # If no error occurred then update data
+        if not data == -4444:
+            self.data = data
 
     def shutdown(self):
-        self.running = False
-        self.receive_thread.join()
         self.socket.close()
 
     def get_message_size(self):

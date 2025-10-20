@@ -1,11 +1,7 @@
 import rclpy
-from rclpy.node import Node
-from src.ur.class_ur import UR
+from src.ros2.node import URNode
 
-class URNode(Node):
-    def __init__(self):
-        super().__init__('ur_node')
-        self.get_logger().info('URNode has started!')
+
 
 def main(args=None):
     rclpy.init(args=args)

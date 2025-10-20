@@ -56,6 +56,8 @@ class UR:
         else:
             self.port = port
 
+        self.node.get_logger().info(f'UR: Connecting to UR on ip: {self.ip}.')
+
         # Connect to the UR arm
         self.socket.connect((self.ip, self.port))
         # Starting communication script

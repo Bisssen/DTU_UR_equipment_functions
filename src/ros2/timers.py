@@ -1,6 +1,6 @@
 from .node import URNode
 
-class ros2_timer():
+class Ros2Timers():
     def __init__(self, node: URNode):
         self.node = node
 

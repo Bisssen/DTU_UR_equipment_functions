@@ -15,7 +15,7 @@ class communication_thread():
         # Creating the socket
         self.socket = socket.socket(socket.AF_INET,
                                     socket.SOCK_STREAM)
-        time_start = time.time()
+
         self.socket.connect((ip, port))
 
         # The thread keeps going as long as this variable is true

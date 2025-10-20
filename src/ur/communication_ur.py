@@ -1,6 +1,7 @@
 import socket
 import struct
 import sys
+import time
 
 from . import config_ur
 
@@ -42,7 +43,14 @@ class communication_thread():
         self.socket.close()
 
     def get_message_size(self):
-        data = (self.socket.recv(2048))
+        time_start = time.time()
+        while time_start + 10 > time.time():
+            try:
+                data = (self.socket.recv(2048))
+                break
+            except BlockingIOError:
+                pass
+        print(data)
         message_size = int(self.transform_data_point(data, 'message_size'))
         self.data = self.transform_data(data)
         

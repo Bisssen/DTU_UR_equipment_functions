@@ -6,11 +6,14 @@ import sys
 
 from . import config_ur
 from .communication_ur import communication_thread
-from ..ros2.node import URNode
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ..ros2.node import URNode
 
 
 class UR:
-    def __init__(self, node: URNode, ip=None, port=None):
+    def __init__(self, node: 'URNode', ip=None, port=None):
         self.node = node
         # Whether the program is run in python 2 or not
         self.python_2 = (sys.version_info.major == 2)
@@ -328,6 +331,26 @@ class UR:
         for item in data_split:
             data_point, data_value = item.split(':')
             self.ur_data[data_point] = float(data_value)
+
+    def publish_ur_pose(self):
+        self.read()
+        print(self.get_joints())
+        # The older version have the position values in a different place
+        if (self.communication_thread.message_size >=
+                config_ur.MESSAGE_SIZE_TO_VERSION['3.0']):
+            self.node.ros2_publishers.publish_ur_pose(self.ur_data['x_actual'],
+             self.ur_data['y_actual'],
+             self.ur_data['z_actual'],
+             self.ur_data['rx_actual'],
+             self.ur_data['ry_actual'],
+             self.ur_data['rz_actual'])
+        else:
+            self.node.ros2_publishers.publish_ur_pose(self.ur_data['x'],
+             self.ur_data['y'],
+             self.ur_data['z'],
+             self.ur_data['rx'],
+             self.ur_data['ry'],
+             self.ur_data['rz'])
 
     def moving_average(self, signal, new_point):
         if new_point > 1e5:

@@ -1,5 +1,5 @@
 import rclpy
-from src.ros2.node import URNode
+from ur_code.src.ros2.node import URNode
 
 
 def main(args=None):

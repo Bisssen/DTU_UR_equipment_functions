@@ -1,7 +1,9 @@
-from .node import URNode
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .node import URNode
 
 class Ros2Timers():
-    def __init__(self, node: URNode):
+    def __init__(self, node: 'URNode'):
         self.node = node
 
         self.timer_frequency = 1/20  # 20Hz
@@ -11,4 +13,5 @@ class Ros2Timers():
 
         self.node.get_logger().info("UR: Starting communication timer...")
 
-        
+        # Timer that publishes the pose of the UR
+        self.pose_publish_timer = self.node.create_timer(self.timer_frequency, self.node.ur.publish_ur_pose)

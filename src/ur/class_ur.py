@@ -334,7 +334,7 @@ class UR:
 
     def publish_ur_pose(self):
         self.read()
-        print(self.get_joints())
+        # print(self.get_joints())
         # The older version have the position values in a different place
         if (self.communication_thread.message_size >=
                 config_ur.MESSAGE_SIZE_TO_VERSION['3.0']):

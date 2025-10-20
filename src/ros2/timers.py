@@ -9,7 +9,8 @@ class Ros2Timers():
         self.timer_frequency = 1/20  # 20Hz
         
         # Timers that replaces the threads that used to run the different socket connections
-        self.ur_connection_timer = self.node.create_timer(self.timer_frequency, self.node.ur.communication_thread.receive)
+        ### NB This one MUST be quite fast, as it needs to keep the socket empty, for the data reading to work
+        self.ur_connection_timer = self.node.create_timer(self.timer_frequency / 10, self.node.ur.communication_thread.receive)
 
         self.node.get_logger().info("UR: Starting communication timer...")
 

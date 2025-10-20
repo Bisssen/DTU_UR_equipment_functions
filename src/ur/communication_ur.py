@@ -17,7 +17,7 @@ class communication_thread():
 
         self.socket.connect((ip, port))
 
-        self.socket.setblocking(0)
+        self.socket.setblocking(1)
 
         # The thread keeps going as long as this variable is true
         self.running = True
@@ -35,6 +35,7 @@ class communication_thread():
         except BlockingIOError:
             return
         data = self.transform_data(data)
+        
         # If no error occurred then update data
         if not data == -4444:
             self.data = data
@@ -50,7 +51,6 @@ class communication_thread():
                 break
             except BlockingIOError:
                 pass
-        print(data)
         message_size = int(self.transform_data_point(data, 'message_size'))
         self.data = self.transform_data(data)
         

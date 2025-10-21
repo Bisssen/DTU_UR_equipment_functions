@@ -8,14 +8,11 @@ from ..utils import euler_to_quaternion
 
 
 class Ros2Publishers():
-    def __init__(self, node: 'URNode'):
+    def __init__(self, node: 'URNode') -> None:
         self.node = node
-
-
         self.ur_pose_publisher = self.node.create_publisher(Pose, 'ur_pose', 10)
 
-
-    def publish_ur_pose(self, x, y, z, roll, pitch, yaw):
+    def publish_ur_pose(self, x: float, y: float, z: float, roll: float, pitch: float, yaw: float) -> None:
         pose = Pose()
 
         pose.position.x = x
@@ -31,4 +28,5 @@ class Ros2Publishers():
 
         self.ur_pose_publisher.publish(pose)
 
-
+# TODO make more publishers
+# I guess I can make more now, but at some point I will need to know what they should look like

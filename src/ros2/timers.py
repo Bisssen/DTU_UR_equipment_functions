@@ -3,7 +3,7 @@ if TYPE_CHECKING:
     from .node import URNode
 
 class Ros2Timers():
-    def __init__(self, node: 'URNode'):
+    def __init__(self, node: 'URNode') -> None:
         self.node = node
 
         self.timer_frequency = 1/20  # 20Hz

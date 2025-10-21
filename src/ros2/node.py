@@ -4,8 +4,14 @@ from .timers import Ros2Timers
 from .publishers import Ros2Publishers
 import ipaddress
 
+# TODO 
+# Make subscribers
+# Figure out how to set payload
+#    - and test
+# Update readme
+
 class URNode(Node):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__('ur_node')
         self.get_logger().info('ur_node has started!')
 

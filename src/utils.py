@@ -1,6 +1,6 @@
 import numpy as np
 
-def quaternion_to_euler(x, y, z, w):
+def quaternion_to_euler(x: float, y: float, z: float, w: float) -> None:
     # Roll (x-axis rotation)
     sinr_cosp = 2 * (w * x + y * z)
     cosr_cosp = 1 - 2 * (x * x + y * y)
@@ -21,7 +21,7 @@ def quaternion_to_euler(x, y, z, w):
     return roll, pitch, yaw
 
 
-def euler_to_quaternion(roll, pitch, yaw):
+def euler_to_quaternion(roll: float, pitch: float, yaw: float) -> None:
     cy = np.cos(yaw * 0.5)
     sy = np.sin(yaw * 0.5)
     cp = np.cos(pitch * 0.5)

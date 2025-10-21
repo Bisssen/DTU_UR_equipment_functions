@@ -61,6 +61,8 @@ class UR:
 
         self.node.get_logger().info(f'UR: Connecting to UR on ip: {self.ip}.')
 
+        ## NB TMP
+        return
         # Connect to the UR arm
         self.socket.connect((self.ip, self.port))
         # Starting communication script
@@ -264,6 +266,8 @@ class UR:
                 send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={pose[2]})\n'
 
         send_string += 'end\n'
+        ## NB TMP
+        return send_string
 
         self.send_line(send_string)
         if wait:

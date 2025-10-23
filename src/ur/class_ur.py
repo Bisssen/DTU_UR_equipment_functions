@@ -18,6 +18,8 @@ class UR:
         # Whether the program is run in python 2 or not
         self.python_2 = (sys.version_info.major == 2)
 
+        self.non_blocking_start_time: float | None = None
+
         # Transformation to task
         self.task_transform = None
         if 'TRANSFORM' in config_ur.__dict__:
@@ -126,8 +128,9 @@ class UR:
         else:
             return (x, y, z)
 
-    def get_pose(self):
-        self.read()
+    def get_pose(self, read=True):
+        if read:
+            self.read()
         # The older version have the position values in a different place
         if (self.communication_thread.message_size >=
                 config_ur.MESSAGE_SIZE_TO_VERSION['3.0']):
@@ -146,8 +149,9 @@ class UR:
             rz = self.ur_data['rz']
         return [x, y, z, rx, ry, rz]
 
-    def get_joints(self):
-        self.read()
+    def get_joints(self, read=True):
+        if read:
+            self.read()
         b = self.ur_data['b']
         s = self.ur_data['s']
         e = self.ur_data['e']
@@ -338,26 +342,6 @@ class UR:
             data_point, data_value = item.split(':')
             self.ur_data[data_point] = float(data_value)
 
-    def publish_ur_pose(self):
-        self.read()
-        # print(self.get_joints())
-        # The older version have the position values in a different place
-        if (self.communication_thread.message_size >=
-                config_ur.MESSAGE_SIZE_TO_VERSION['3.0']):
-            self.node.ros2_publishers.publish_ur_pose(self.ur_data['x_actual'],
-             self.ur_data['y_actual'],
-             self.ur_data['z_actual'],
-             self.ur_data['rx_actual'],
-             self.ur_data['ry_actual'],
-             self.ur_data['rz_actual'])
-        else:
-            self.node.ros2_publishers.publish_ur_pose(self.ur_data['x'],
-             self.ur_data['y'],
-             self.ur_data['z'],
-             self.ur_data['rx'],
-             self.ur_data['ry'],
-             self.ur_data['rz'])
-
     def moving_average(self, signal, new_point):
         if new_point > 1e5:
             new_point = 0
@@ -367,6 +351,7 @@ class UR:
         return new_signal, average
 
     def wait(self):
+        ## NB THE WAIT function does not work with the current ros implementation
         # Hold-off to let the robot start movement before using data
         time.sleep(0.1)
         controller_time = 0
@@ -410,6 +395,41 @@ class UR:
                 
                 if total_mean_velocity < config_ur.VELOCITY_MEAN_THRESHOLD * 6:
                     break
+
+    def wait_non_blocking(self) -> bool:
+        '''
+        This is not updated to work with pre V3.2 software.
+        Returns True if the robot is still moving
+        and otherwise returns False
+
+        This is NOT meant to be a tool for checking if the robot is still moving
+        It mimics the wait function in a non blocking manner
+        This means that after the start time is initialized, it will assume the robot
+        is moving for 0.1 seconds 
+        '''
+        
+        # initialize the start time
+        if self.non_blocking_start_time is None:
+            self.non_blocking_start_time = time.time()
+        
+        # Wait a bit before checking the moving flag, to ensure it is updated
+        # There will be some delay from sending move command -> robot moves -> flag gets updated -> flag gets received
+        # This is especially true for the pre 3.2 speed check, but it is not currently implemented
+        if self.non_blocking_start_time + 0.1 > time.time():
+            return True
+        
+        # TODO could also implement a timeout but whatever
+
+        # Make sure the status flag is up to date
+        self.read()
+
+        if not self.ur_data['status'] == 1:
+            # Robot is still moving
+            return True
+    
+
+        self.non_blocking_start_time = None
+        return False
 
     def send_line(self, _str):
         if type(_str) is str:

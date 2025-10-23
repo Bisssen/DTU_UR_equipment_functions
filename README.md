@@ -13,6 +13,20 @@ The necessary setup to begin controlling this equipment:
 
 *IMPORTANT* On earlier versions ( < 3.2 ) of the Client Interface software on the UR robots, the wait function uses the speed of the joints to determine when it has finished a command, and as such is prone to error at low speeds. The **VELOCITY_MEAN_THRESHOLD** threshold variable can be adjusted in the **src/ur/config_ur.py** file to combat this issue.
 
+## ROS2 interface
+This code cannot be used in ROS2 as it is. It is meant to be part of a ROS2 package, and to use the UR interface with ROS2, a package must be created that correctly points to this code using its **setup.py**. Addind the following lines, to **setup.py** will achieve this:
+
+```python
+packages=find_packages(where='.'),  # Look in current directory
+package_dir={'': '.'},  # Root is current directory
+entry_points={
+    'console_scripts': [
+        'ur_node = ur_code.ur_ros2_node:main',
+        'action_send_test = ur_code.action_sender_test:main',
+        'action_recv_test = ur_code.action_recv_test:main',
+    ],
+```
+
 ## UR robots
 The **UR** class contains all the functionality needed to control the robot arm. Create a UR object of the class and use this object to communicate with the robot.
 

@@ -2,8 +2,6 @@ from src.ur.class_ur import UR
 from math import pi
 import time
 
-# TODO update this to match the ros stuff instead
-
 # Open UR
 ur = UR()
 

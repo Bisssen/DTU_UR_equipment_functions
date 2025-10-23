@@ -6,8 +6,6 @@ from .publishers import Ros2Publishers
 from .subscribers import Ros2Subscribers
 import ipaddress
 
-# TODO
-# Update readme
 
 class URNode(Node):
     def __init__(self) -> None:
@@ -15,7 +13,6 @@ class URNode(Node):
         self.get_logger().info('ur_node has started!')
 
         self.ros2_publishers = Ros2Publishers(self)
-
 
         self.ur = UR(self, ip=self.get_ip())
 

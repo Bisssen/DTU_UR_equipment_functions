@@ -1,8 +1,7 @@
 from rclpy.action import ActionServer
 from control_msgs.action import FollowJointTrajectory
 
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
+import threading
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -11,7 +10,6 @@ if TYPE_CHECKING:
 class Ros2Actions():
     def __init__(self, node: 'URNode') -> None:
         self.node = node
-        self.executor = ThreadPoolExecutor()
 
         self.follow_trajectory_action = ActionServer(
             self.node,
@@ -20,7 +18,7 @@ class Ros2Actions():
             self.execute_callback
         )
 
-    async def execute_callback(self, goal_handle) -> None:
+    def execute_callback(self, goal_handle) -> None:
         trajectory = goal_handle.request.trajectory
 
         poses = []
@@ -30,19 +28,23 @@ class Ros2Actions():
             tmp_list.append(None)
             poses.append(tmp_list)
 
-        await asyncio.get_event_loop().run_in_executor(
-            self.executor,
-            self.node.ur.path,
+        # Run the blocking function in a separate thread
+
+        self.node.ur.path(
             poses,
             False,
             False,
             0.5,  # Accelertaion
             0.1,  # Speed
-            True
+            False
         )
 
-        goal_handle.succeed()
+        # Keep the main loop running, but block the code until
+        # The UR executes its movement.
+        self.node.ros2_timers.timer_main_loop_blocking()
 
-        result = FollowJointTrajectory.Result()
-        # Populate result if needed
-        return result
+        print('done moving')
+
+        goal_handle.succeed()
+    
+        return FollowJointTrajectory.Result()

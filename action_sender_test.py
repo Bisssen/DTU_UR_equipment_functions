@@ -8,6 +8,7 @@ from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from std_msgs.msg import Header
 from builtin_interfaces.msg import Time, Duration
 import time
+import numpy as np
 
 class TrajectoryClient(Node):
 
@@ -27,11 +28,13 @@ class TrajectoryClient(Node):
             'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint'
         ]
         points_list =\
-            [[-1.48, -2.84, 1.56, 1.83, 0.51, 1.58],
-             [-1.58, -2.84, 1.56, 1.83, 0.51, 1.58],
-             [-1.68, -2.84, 1.56, 1.83, 0.51, 1.58],
-             [-1.78, -2.84, 1.56, 1.83, 0.51, 1.58],
-             [-1.88, -2.84, 1.56, 1.83, 0.51, 1.58]]
+            [[np.deg2rad(-156), np.deg2rad(-67), np.deg2rad(-25), np.deg2rad(-119), np.deg2rad(89), np.deg2rad(-112)],
+             [np.deg2rad(-156), np.deg2rad(-48), np.deg2rad(-46), np.deg2rad(-119), np.deg2rad(89), np.deg2rad(-112)],
+             [np.deg2rad(-179), np.deg2rad(-48), np.deg2rad(-46), np.deg2rad(-136), np.deg2rad(89), np.deg2rad(-112)]]#,
+            #  [-1.58, -2.84, 1.56, 1.83, 0.51, 1.58],
+            #  [-1.68, -2.84, 1.56, 1.83, 0.51, 1.58],
+            #  [-1.78, -2.84, 1.56, 1.83, 0.51, 1.58],
+            #  [-1.88, -2.84, 1.56, 1.83, 0.51, 1.58]]
 
         for i, point_list in enumerate(points_list):
             point = JointTrajectoryPoint()
@@ -71,7 +74,9 @@ def main(args=None):
     while True:
         client.send_goal()
         time.sleep(1)
-    rclpy.spin(client)
+        
+        rclpy.spin(client)
+        break
 
 if __name__ == '__main__':
     main()

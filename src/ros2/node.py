@@ -3,12 +3,10 @@ from ..ur.class_ur import UR
 from .timers import Ros2Timers
 from .actions import Ros2Actions
 from .publishers import Ros2Publishers
+from .subscribers import Ros2Subscribers
 import ipaddress
 
-# TODO 
-# Make subscribers
-# Figure out how to set payload
-#    - and test
+# TODO
 # Update readme
 
 class URNode(Node):
@@ -19,9 +17,11 @@ class URNode(Node):
         self.ros2_publishers = Ros2Publishers(self)
 
 
-        self.ur = UR(self, ip=self.get_ip())  # TODO add ros2 way of setting ip
+        self.ur = UR(self, ip=self.get_ip())
 
-        # self.ros2_timers = Ros2Timers(self)
+        self.ros2_timers = Ros2Timers(self)
+
+        self.ros2_subscribers = Ros2Subscribers(self)
 
         self.ros2_actions = Ros2Actions(self)
     

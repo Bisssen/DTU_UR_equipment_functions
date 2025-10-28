@@ -26,11 +26,11 @@ class Ros2Timers():
         joints = self.node.ur.get_joints(read=False)
         joints_velocity = self.node.ur.get_joints_velocity(read=False)
 
-        self.node.ros2_publishers.publish_ur_pose(pose)
-        self.node.ros2_publishers.publish_ur_pose_velocity(pose_velocity)
+        self.node.ros2_publishers.publish_ur_pose(pose, pose_velocity)
+        # self.node.ros2_publishers.publish_ur_pose_velocity(pose_velocity)
 
-        self.node.ros2_publishers.publish_ur_joints(joints)
-        self.node.ros2_publishers.publish_ur_joints_velocity(joints_velocity)
+        self.node.ros2_publishers.publish_ur_joints(joints, joints_velocity)
+        # self.node.ros2_publishers.publish_ur_joints_velocity(joints_velocity)
 
         self.node.ros2_publishers.publish_is_ur_moving(
             self.node.ur.is_moving()

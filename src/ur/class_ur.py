@@ -46,6 +46,9 @@ class UR:
         # Dictionary containing all the ur data which have been reading
         self.ur_data = {}
 
+        # Timer that keeps track of when the robot just started moving
+        self.moving_timer: None|float = None
+
         # Connecting socket directly to robot
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         
@@ -173,8 +176,10 @@ class UR:
             self.socket.send((f'move{mode[0]}({pose},{acc},{speed})\n').encode())
         else:
             self.socket.send((f'move{mode[0]}(p{pose},{acc},{speed})\n').encode())
+        
+        self.moving_timer = time.time()
         if wait:
-            self.wait()    
+            self.wait()
     
     def generate_move(self, x=None, y=None, z=None, rx=None, ry=None, rz=None, 
                       b=None, s=None, e=None, w1=None, w2=None, w3=None, 
@@ -271,6 +276,8 @@ class UR:
 
 
         self.send_line(send_string)
+
+        self.moving_timer = time.time()
         if wait:
             self.wait()
     
@@ -284,6 +291,7 @@ class UR:
     def move_tool(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, acc=1, speed=0.1,
                   wait=False):
         self.socket.send((f'movel(pose_trans(get_forward_kin(),p[{x},{y},{z},{rx},{ry},{rz}]),{acc},{speed})\n').encode())
+        self.moving_timer = time.time()
         if wait:
             self.wait()
 
@@ -314,6 +322,7 @@ class UR:
             pose[:3] = v_base[:3] - t
 
         self.socket.send((f'speed{mode[0]}({pose},{acc},{time})\n').encode())
+        self.moving_timer = time.time()
         if wait:
             self.wait()
 
@@ -324,9 +333,11 @@ class UR:
         v_base = T.dot(v_tool)
         v_speed = v_base[:3] - t
         self.speed(x=v_speed[0], y=v_speed[1], z=v_speed[2], acc=acc, time=time)
+        self.moving_timer = time.time()
 
     def stop(self, acc=5, mode='linear', wait=False):
         self.socket.send((f'stop{mode[0]}({acc})\n').encode())
+        self.moving_timer = time.time()
         if wait:
             self.wait()
 
@@ -406,6 +417,8 @@ class UR:
         It mimics the wait function in a non blocking manner
         This means that after the start time is initialized, it will assume the robot
         is moving for 0.1 seconds 
+
+        I guess this is not needed any more, but keep it until the new one is tested
         '''
         
         # initialize the start time
@@ -430,6 +443,47 @@ class UR:
 
         self.non_blocking_start_time = None
         return False
+
+    def is_moving(self) -> bool:
+        # If the moving timer is not, set then something is wrong
+        # but rely on the data to check if the robot is moving
+        if self.moving_timer is None:
+            return self.check_ur_if_moving()
+        
+        # Wait until the robot have been moving a little bit before checking the 
+        # ur data to ensure the data is updated
+        if self.moving_timer + 0.1 > time.time():
+            return True
+        
+        return self.check_ur_if_moving()
+
+
+    def check_ur_if_moving(self) -> bool:
+        self.read()
+        # If newer software then read the status directly
+        if (self.communication_thread.message_size >=
+                config_ur.MESSAGE_SIZE_TO_VERSION['3.2']):
+            if self.ur_data['status'] == 1:
+                return False
+        # Otherwise check if the arm is still moving
+        else:
+            current_velocities = [self.ur_data['v_b'],
+                                    self.ur_data['v_s'],
+                                    self.ur_data['v_e'],
+                                    self.ur_data['v_w1'],
+                                    self.ur_data['v_w2'],
+                                    self.ur_data['v_w3']]
+            total_mean_velocity = 0
+            velocity_series = [[1] * 20] * 6
+            for i, velocity in enumerate(velocity_series):
+                velocity_series[i], velocity_mean = self.moving_average(velocity, current_velocities[i])
+                total_mean_velocity += abs(velocity_mean)
+            
+            if total_mean_velocity < config_ur.VELOCITY_MEAN_THRESHOLD * 6:
+                return False
+        
+        return True
+
 
     def send_line(self, _str):
         if type(_str) is str:

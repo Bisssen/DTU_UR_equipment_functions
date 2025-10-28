@@ -57,5 +57,5 @@ class Ros2Timers():
         This is used to keep the main loop running while the program is blocking
         during actions
         '''
-        while self.node.ur.wait_non_blocking():
+        while self.node.ur.is_moving():
             self.timer_main_loop()

@@ -1,5 +1,6 @@
 from geometry_msgs.msg import Pose
 from sensor_msgs.msg import JointState
+from std_msgs.msg import Bool
 
 
 from typing import TYPE_CHECKING
@@ -14,6 +15,8 @@ class Ros2Publishers():
         self.ur_pose_publisher = self.node.create_publisher(Pose, 'ur_pose', 10)
 
         self.joint_positions_publisher = self.node.create_publisher(JointState, 'ur_joint_positions', 10)
+
+        self.ur_moving_publisher = self.node.create_publisher(Bool, 'ur_moving', 10)
 
     def publish_ur_pose(self, x: float, y: float, z: float, roll: float, pitch: float, yaw: float) -> None:
         pose = Pose()
@@ -39,6 +42,10 @@ class Ros2Publishers():
         msg.position = [b, s, e, w1, w2, w3]
         self.joint_positions_publisher.publish(msg)
 
+    def publish_robot_is_moving(self, is_moving):
+        msg = Bool()
+        msg.data = is_moving
+        self.ur_moving_publisher.publish(msg)
 
 # TODO make more publishers
 # I guess I can make more now, but at some point I will need to know what they should look like

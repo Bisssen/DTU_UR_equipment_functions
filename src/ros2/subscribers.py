@@ -19,23 +19,36 @@ class Ros2Subscribers():
             self.payload_setter_callback,
             10
         )
-    #     self.pose_command_subscriber =\
-    #         self.node.create_subscription(
-    #             Pose,
-    #             'set_ur_pose',
-    #             self.pose_command_callback,
-    #             10
-    #         )
+        self.pose_command_subscriber =\
+            self.node.create_subscription(
+                Pose,
+                'set_ur_pose',
+                self.pose_command_callback,
+                10
+            )
 
-    # def pose_command_callback(self, msg: Pose) -> None:
-
-    #     msg.position.x
-    #     msg.position.y
-    #     msg.position.z
-    #     msg.orientation.x
-    #     msg.orientation.y
-    #     msg.orientation.z
-    #     msg.orientation.w
+    def pose_command_callback(self, msg: Pose) -> None:
+        '''
+        Send the robot to a specific position.
+        '''
+        wrist_angles = quaternion_to_euler(
+            msg.orientation.x,
+            msg.orientation.y,
+            msg.orientation.z,
+            msg.orientation.w
+            )
+        
+        self.node.ur.move(
+            msg.position.x,
+            msg.position.y,
+            msg.position.z,
+            wrist_angles[0],
+            wrist_angles[1],
+            wrist_angles[2],
+            mode='linear',
+            transform=False,
+            wait=False
+        )
 
     def payload_setter_callback(self, msg: Float32) -> None:
         payload = msg.data

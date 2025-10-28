@@ -129,7 +129,7 @@ class UR:
         if world:
             return self.transform_base2task(x, y, z)
         else:
-            return (x, y, z)
+            return (x, y, z) 
 
     def get_pose(self, read=True):
         if read:
@@ -137,31 +137,51 @@ class UR:
         # The older version have the position values in a different place
         if (self.communication_thread.message_size >=
                 config_ur.MESSAGE_SIZE_TO_VERSION['3.0']):
-            x = self.ur_data['x_actual']
-            y = self.ur_data['y_actual']
-            z = self.ur_data['z_actual']
-            rx = self.ur_data['rx_actual']
-            ry = self.ur_data['ry_actual']
-            rz = self.ur_data['rz_actual']
+            x = self.ur_data[config_ur.X_ACTUAL]
+            y = self.ur_data[config_ur.Y_ACTUAL]
+            z = self.ur_data[config_ur.Z_ACTUAL]
+            rx = self.ur_data[config_ur.RX_ACTUAL]
+            ry = self.ur_data[config_ur.RY_ACTUAL]
+            rz = self.ur_data[config_ur.RZ_ACTUAL]
         else:
-            x = self.ur_data['x']
-            y = self.ur_data['y']
-            z = self.ur_data['z']
-            rx = self.ur_data['rx']
-            ry = self.ur_data['ry']
-            rz = self.ur_data['rz']
+            x = self.ur_data[config_ur.X]
+            y = self.ur_data[config_ur.Y]
+            z = self.ur_data[config_ur.Z]
+            rx = self.ur_data[config_ur.RX]
+            ry = self.ur_data[config_ur.RY]
+            rz = self.ur_data[config_ur.RZ]
         return [x, y, z, rx, ry, rz]
 
-    def get_joints(self, read=True):
+    def get_pose_velocity(self, read=True) -> list[float]:
         if read:
             self.read()
-        b = self.ur_data['b']
-        s = self.ur_data['s']
-        e = self.ur_data['e']
-        w1 = self.ur_data['w1']
-        w2 = self.ur_data['w2']
-        w3 = self.ur_data['w3']
+        return [self.ur_data[config_ur.V_X],
+                self.ur_data[config_ur.V_Y],
+                self.ur_data[config_ur.V_Z],
+                self.ur_data[config_ur.V_RX],
+                self.ur_data[config_ur.V_RY],
+                self.ur_data[config_ur.V_RZ]]
+
+    def get_joints(self, read=True) -> list[float]:
+        if read:
+            self.read()
+        b = self.ur_data[config_ur.B]
+        s = self.ur_data[config_ur.S]
+        e = self.ur_data[config_ur.E]
+        w1 = self.ur_data[config_ur.W1]
+        w2 = self.ur_data[config_ur.W2]
+        w3 = self.ur_data[config_ur.W3]
         return [b, s, e, w1, w2, w3]
+    
+    def get_joints_velocity(self, read=True) -> list[float]:
+        if read:
+            self.read()
+        return [self.ur_data[config_ur.V_B],
+                self.ur_data[config_ur.V_S],
+                self.ur_data[config_ur.V_E],
+                self.ur_data[config_ur.V_W1],
+                self.ur_data[config_ur.V_W2],
+                self.ur_data[config_ur.V_W3]]
 
     def move(self, x=None, y=None, z=None, rx=None, ry=None, rz=None, 
                    b=None, s=None, e=None, w1=None, w2=None, w3=None, 
@@ -266,11 +286,17 @@ class UR:
         # Start of the function
         send_string = 'def follow_path():\n'
 
-        for pose in data:
+        for pose in data[:-1]:
             if pose[1] == 'j':
                 send_string += f'    move{pose[1]}({pose[0]},{acc},{speed},r={pose[2]})\n'
             else:
                 send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={pose[2]})\n'
+        
+        pose = data[-1]
+        if pose[1] == 'j':
+            send_string += f'    move{pose[1]}({pose[0]},{acc},{speed})\n'
+        else:
+            send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed})\n'
 
         send_string += 'end\n'
 
@@ -375,8 +401,8 @@ class UR:
             self.read()
 
             # Test if new data have arrived
-            if controller_time != self.ur_data['time']:
-                controller_time = self.ur_data['time']
+            if controller_time != self.ur_data[config_ur.TIME]:
+                controller_time = self.ur_data[config_ur.TIME]
             else:
                 # If not sleep the rate that is equal to
                 # when the next new data should arive
@@ -393,12 +419,12 @@ class UR:
                     break
             # Otherwise check if the arm is still moving
             else:
-                current_velocities = [self.ur_data['v_b'],
-                                      self.ur_data['v_s'],
-                                      self.ur_data['v_e'],
-                                      self.ur_data['v_w1'],
-                                      self.ur_data['v_w2'],
-                                      self.ur_data['v_w3']]
+                current_velocities = [self.ur_data[config_ur.V_B],
+                                      self.ur_data[config_ur.V_S],
+                                      self.ur_data[config_ur.V_E],
+                                      self.ur_data[config_ur.V_W1],
+                                      self.ur_data[config_ur.V_W2],
+                                      self.ur_data[config_ur.V_W3]]
                 total_mean_velocity = 0
                 for i, velocity in enumerate(velocity_series):
                     velocity_series[i], velocity_mean = self.moving_average(velocity, current_velocities[i])
@@ -467,12 +493,12 @@ class UR:
                 return False
         # Otherwise check if the arm is still moving
         else:
-            current_velocities = [self.ur_data['v_b'],
-                                    self.ur_data['v_s'],
-                                    self.ur_data['v_e'],
-                                    self.ur_data['v_w1'],
-                                    self.ur_data['v_w2'],
-                                    self.ur_data['v_w3']]
+            current_velocities = [self.ur_data[config_ur.V_B],
+                                    self.ur_data[config_ur.V_S],
+                                    self.ur_data[config_ur.V_E],
+                                    self.ur_data[config_ur.V_W1],
+                                    self.ur_data[config_ur.V_W2],
+                                    self.ur_data[config_ur.V_W3]]
             total_mean_velocity = 0
             velocity_series = [[1] * 20] * 6
             for i, velocity in enumerate(velocity_series):

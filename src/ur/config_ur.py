@@ -4,16 +4,66 @@ from math import pi
 # Used to determine the RealTime version from message length
 MESSAGE_SIZE_TO_VERSION = {'3.0': 1044, '3.2': 1060}
 
+MESSAGE_SIZE = 'message_size'
+TIME = 'time'
+Q_B = 'q_b'
+Q_S = 'q_s'
+Q_E = 'q_e'
+Q_W1 = 'q_w1'
+Q_W2 = 'q_w2'
+Q_W3 = 'q_w3'
+B = 'b'
+S = 's'
+E = 'e'
+W1 = 'w1'
+W2 = 'w2'
+W3 = 'w3'
+V_B = 'v_b'
+V_S = 'v_s'
+V_E = 'v_e'
+V_W1 = 'v_w1'
+V_W2 = 'v_w2'
+V_W3 = 'v_w3'
+X_ACTUAL = 'x_actual'
+Y_ACTUAL = 'y_actual'
+Z_ACTUAL = 'z_actual'
+RX_ACTUAL = 'rx_actual'
+RY_ACTUAL = 'ry_actual'
+RZ_ACTUAL = 'rz_actual'
+V_X = 'v_x'
+V_Y = 'v_y'
+V_Z = 'v_z'
+V_RX = 'v_rx'
+V_RY = 'v_ry'
+V_RZ = 'v_rz'
+F_X = 'f_x'
+F_Y = 'f_y'
+F_Z = 'f_z'
+F_RX = 'f_rx'
+F_RY = 'f_ry'
+F_RZ = 'f_rz'
+X = 'x'
+Y = 'y'
+Z = 'z'
+RX = 'rx'
+RY = 'ry'
+RZ = 'rz'
+ROBOT_MODE = 'robot_mode'
+STATUS = 'status'
+
 # Mapping of data message to variables
-DATA_MAP = {'message_size': 0, 'time': 1,
-            'q_b': 2,'q_s': 3, 'q_e': 4, 'q_w1': 5, 'q_w2': 6, 'q_w3': 7,
-            'b': 32, 's': 33, 'e': 34, 'w1': 35, 'w2': 36, 'w3': 37,
-            'v_b': 38, 'v_s': 39, 'v_e': 40, 'v_w1': 41, 'v_w2': 42, 'v_w3': 43,
-            'x_actual': 56, 'y_actual': 57, 'z_actual': 58, 'rx_actual': 59, 'ry_actual': 60, 'rz_actual': 61,
-            'v_x': 62, 'v_y': 63, 'v_z': 64, 'v_rx': 65, 'v_ry': 66, 'v_rz': 67,
-            'f_x': 68, 'f_y': 69, 'f_z': 70, 'f_rx': 71, 'f_ry': 72, 'f_rz': 73,
-            'x': 74, 'y': 75, 'z': 76, 'rx': 77, 'ry': 78, 'rz': 79,
-            'robot_mode': 95, 'status': 132}
+DATA_MAP = {
+    MESSAGE_SIZE: 0, TIME: 1,
+    Q_B: 2, Q_S: 3, Q_E: 4, Q_W1: 5, Q_W2: 6, Q_W3: 7,
+    B: 32, S: 33, E: 34, W1: 35, W2: 36, W3: 37,
+    V_B: 38, V_S: 39, V_E: 40, V_W1: 41, V_W2: 42, V_W3: 43,
+    X_ACTUAL: 56, Y_ACTUAL: 57, Z_ACTUAL: 58, RX_ACTUAL: 59, RY_ACTUAL: 60, RZ_ACTUAL: 61,
+    V_X: 62, V_Y: 63, V_Z: 64, V_RX: 65, V_RY: 66, V_RZ: 67,
+    F_X: 68, F_Y: 69, F_Z: 70, F_RX: 71, F_RY: 72, F_RZ: 73,
+    X: 74, Y: 75, Z: 76, RX: 77, RY: 78, RZ: 79,
+    ROBOT_MODE: 95, STATUS: 132
+}
+
 
 
 ###             VARIABLES             ###

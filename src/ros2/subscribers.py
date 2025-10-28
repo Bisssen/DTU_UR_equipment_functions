@@ -1,10 +1,11 @@
+from geometry_msgs.msg import Pose
+from sensor_msgs.msg import JointState
+from std_msgs.msg import Float32
+
+from ..utils import quaternion_to_euler
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .node import URNode
-
-from geometry_msgs.msg import Pose
-from std_msgs.msg import Float32
-from ..utils import quaternion_to_euler
 
 
 class Ros2Subscribers():
@@ -24,6 +25,14 @@ class Ros2Subscribers():
                 Pose,
                 'set_ur_pose',
                 self.pose_command_callback,
+                10
+            )
+        
+        self.joints_command_subscriber =\
+            self.node.create_subscription(
+                JointState,
+                'set_ur_joints',
+                self.joints_command_callback,
                 10
             )
 
@@ -49,6 +58,11 @@ class Ros2Subscribers():
             transform=False,
             wait=False
         )
+    
+    def joints_command_callback(self, msg: JointState) -> None:
+        '''
+        Send the ur to a specific joints state
+        '''
 
     def payload_setter_callback(self, msg: Float32) -> None:
         payload = msg.data

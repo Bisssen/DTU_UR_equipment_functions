@@ -22,27 +22,20 @@ class Ros2Timers():
 
     def publish_ur_data(self) -> None:
         pose = self.node.ur.get_pose()
+        pose_velocity = self.node.ur.get_pose_velocity(read=False)
         joints = self.node.ur.get_joints(read=False)
+        joints_velocity = self.node.ur.get_joints_velocity(read=False)
 
-        self.node.ros2_publishers.publish_ur_pose(
-            pose[0],
-            pose[1],
-            pose[2],
-            pose[3],
-            pose[4],
-            pose[5]
-        )
+        self.node.ros2_publishers.publish_ur_pose(pose)
+        self.node.ros2_publishers.publish_ur_pose_velocity(pose_velocity)
 
-        self.node.ros2_publishers.publish_joint_positions(
-            joints[0],
-            joints[1],
-            joints[2],
-            joints[3],
-            joints[4],
-            joints[5]
+        self.node.ros2_publishers.publish_ur_joints(joints)
+        self.node.ros2_publishers.publish_ur_joints_velocity(joints_velocity)
+
+        self.node.ros2_publishers.publish_is_ur_moving(
+            self.node.ur.is_moving()
         )
     
-
     def timer_main_loop(self) -> None:
         # Make sure to read data from the UR
         self.node.ur.communication_thread.receive()

@@ -14,7 +14,7 @@ class Ros2Publishers():
         self.ur_pose_publisher = self.node.create_publisher(JointState, 'ur_pose', 10)
         # self.ur_pose_velocity_publisher = self.node.create_publisher(Pose, 'ur_pose_velocity', 10)
 
-        self.ur_joints_publisher = self.node.create_publisher(JointState, 'ur_joints', 10)
+        self.ur_joints_publisher = self.node.create_publisher(JointState, '/ur10/joint_states_ur10', 10)
         # self.ur_joints_velocity_publisher = self.node.create_publisher(JointState, 'ur_joints_velocity', 10)
 
         self.is_ur_moving_publisher = self.node.create_publisher(Bool, 'is_ur_moving', 10)
@@ -80,7 +80,13 @@ class Ros2Publishers():
         msg = JointState()
         msg.header.stamp = self.node.get_clock().now().to_msg()
         if joint:
-            msg.name = ['b', 's', 'e', 'w1', 'w2', 'w3']
+            msg.name = ['shoulder_pan_joint',
+                        'shoulder_lift_joint',
+                        'elbow_joint',
+                        'wrist_1_joint',
+                        'wrist_2_joint',
+                        'wrist_3_joint']
+
         else:
             msg.name = ['x', 'y', 'z', 'rx', 'ry', 'rz']
         msg.position = jointstate_list

@@ -12,7 +12,7 @@ class Ros2Subscribers():
     def __init__(self, node: 'URNode') -> None:
         self.node = node
 
-
+        # Change to service
         self.payload_setter_subscriber =\
         self.node.create_subscription(
             Float32,
@@ -20,6 +20,7 @@ class Ros2Subscribers():
             self.payload_setter_callback,
             10
         )
+
         self.pose_command_subscriber =\
             self.node.create_subscription(
                 Pose,

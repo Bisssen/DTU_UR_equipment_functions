@@ -49,6 +49,11 @@ class UR:
         # Timer that keeps track of when the robot just started moving
         self.moving_timer: None|float = None
 
+        self.stopping_timer: None|float = None
+        self.stopping_time = 1.0
+
+        self.temp_timer = 0.0
+
         # Connecting socket directly to robot
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         
@@ -478,7 +483,7 @@ class UR:
         
         # Wait until the robot have been moving a little bit before checking the 
         # ur data to ensure the data is updated
-        if self.moving_timer + 0.1 > time.time():
+        if self.moving_timer + 1.0 > time.time():
             return True
         
         return self.check_ur_if_moving()
@@ -494,24 +499,43 @@ class UR:
         # Otherwise check if the arm is still moving
         else:
             current_velocities = [self.ur_data[config_ur.V_B],
-                                    self.ur_data[config_ur.V_S],
-                                    self.ur_data[config_ur.V_E],
-                                    self.ur_data[config_ur.V_W1],
-                                    self.ur_data[config_ur.V_W2],
-                                    self.ur_data[config_ur.V_W3]]
+                                  self.ur_data[config_ur.V_S],
+                                  self.ur_data[config_ur.V_E],
+                                  self.ur_data[config_ur.V_W1],
+                                  self.ur_data[config_ur.V_W2],
+                                  self.ur_data[config_ur.V_W3]]
             total_mean_velocity = 0
-            velocity_series = [[1] * 20] * 6
-            for i, velocity in enumerate(velocity_series):
-                velocity_series[i], velocity_mean = self.moving_average(velocity, current_velocities[i])
-                total_mean_velocity += abs(velocity_mean)
-            
-            if total_mean_velocity < config_ur.VELOCITY_MEAN_THRESHOLD * 6:
-                return False
+            # velocity_series = [[1] * 20] * 6
+            # for i, velocity in enumerate(velocity_series):
+            #     velocity_series[i], velocity_mean = self.moving_average(velocity, current_velocities[i])
+            #     total_mean_velocity += abs(velocity_mean)
+
+            for vel in current_velocities:
+                total_mean_velocity += abs(vel)
+            total_mean_velocity *= 1/6
+
+
+            if self.temp_timer + 1 < time.time():
+                self.temp_timer = time.time()
+                print(total_mean_velocity, config_ur.VELOCITY_MEAN_THRESHOLD, self.stopping_timer)
+
+            if total_mean_velocity > config_ur.VELOCITY_MEAN_THRESHOLD:
+                self.stopping_timer = None
+                return True
+
+            if self.stopping_timer is None:
+                self.stopping_timer = time.time()
+
+            if self.stopping_timer + self.stopping_time > time.time():
+                return True
+
+            return False
         
         return True
 
 
     def send_line(self, _str):
+        self.stopping_timer = None
         if type(_str) is str:
             self.socket.send(_str.encode())
         elif type(_str) is bytes:

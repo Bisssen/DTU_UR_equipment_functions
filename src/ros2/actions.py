@@ -14,19 +14,25 @@ class Ros2Actions():
         self.follow_trajectory_action = ActionServer(
             self.node,
             FollowJointTrajectory,
-            'follow_joint_trajectory',
+            '/ur10/follow_joint_trajectory',
             self.execute_callback
         )
 
     def execute_callback(self, goal_handle) -> None:
         trajectory = goal_handle.request.trajectory
 
+        print('Received movement commeand')
         poses = []
-        for point in trajectory.points:
+        for i, point in enumerate(trajectory.points):
             tmp_list = list(point.positions)
             tmp_list.append('j')
-            tmp_list.append(None)
+            tmp_list.append(0.05)
             poses.append(tmp_list)
+    
+            if i == len(trajectory.points) - 1:
+                print('----')
+                print(point.positions)
+                print('----')
 
         # Run the blocking function in a separate thread
 
@@ -35,7 +41,7 @@ class Ros2Actions():
             False,
             False,
             0.5,  # Accelertaion
-            0.1,  # Speed
+            0.5,  # Speed
             False
         )
 
@@ -48,3 +54,4 @@ class Ros2Actions():
         goal_handle.succeed()
     
         return FollowJointTrajectory.Result()
+

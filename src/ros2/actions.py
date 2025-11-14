@@ -1,8 +1,6 @@
 from rclpy.action import ActionServer
 from control_msgs.action import FollowJointTrajectory
 
-import threading
-
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .node import URNode
@@ -21,21 +19,17 @@ class Ros2Actions():
     def execute_callback(self, goal_handle) -> None:
         trajectory = goal_handle.request.trajectory
 
-        print('Received movement commeand')
-        poses = []
-        for i, point in enumerate(trajectory.points):
+        final_pose = list(trajectory.points[-1])
+        self.node.get_logger().info(f'Received movement command to point: {final_pose}')
+
+        poses = []        
+        for point in trajectory.points:
             tmp_list = list(point.positions)
             tmp_list.append('j')
             tmp_list.append(0.05)
             poses.append(tmp_list)
-    
-            if i == len(trajectory.points) - 1:
-                print('----')
-                print(point.positions)
-                print('----')
 
         # Run the blocking function in a separate thread
-
         self.node.ur.path(
             poses,
             False,
@@ -47,9 +41,9 @@ class Ros2Actions():
 
         # Keep the main loop running, but block the code until
         # The UR executes its movement.
-        self.node.ros2_timers.timer_main_loop_blocking()
+        self.node.ros2_timers.timer_main_loop_blocking(final_pose)
 
-        print('done moving')
+        self.node.get_logger().info(f'Done with movement')
 
         goal_handle.succeed()
     

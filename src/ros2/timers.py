@@ -32,9 +32,10 @@ class Ros2Timers():
         self.node.ros2_publishers.publish_ur_joints(joints, joints_velocity)
         # self.node.ros2_publishers.publish_ur_joints_velocity(joints_velocity)
 
-        self.node.ros2_publishers.publish_is_ur_moving(
-            self.node.ur.is_moving()
-        )
+        # # This one is not really acurate, so I am disabling it
+        # self.node.ros2_publishers.publish_is_ur_moving(
+        #     self.node.ur.is_moving()
+        # )
     
     def timer_main_loop(self) -> None:
         # Make sure to read data from the UR
@@ -44,11 +45,11 @@ class Ros2Timers():
         self.publish_ur_data()
 
     
-    def timer_main_loop_blocking(self) -> None:
+    def timer_main_loop_blocking(self, desired_pos: list[float]) -> None:
         '''
         Will run the timer_main_loop while blocking if the robot is still moving.
         This is used to keep the main loop running while the program is blocking
         during actions
         '''
-        while self.node.ur.is_moving():
+        while not self.node.ur.check_if_pos_is_reached(desired_pos):
             self.timer_main_loop()

@@ -533,6 +533,16 @@ class UR:
         
         return True
 
+    def check_if_pos_is_reached(self, pos: list[float], tolerance: float = 0.1) -> bool:
+        current_pos = self.get_pose()
+
+        pos_is_reached = True
+        for current_point, desired_point in zip(current_pos, pos):
+            if abs(current_point - desired_point) > tolerance:
+                pos_is_reached = False
+                break
+
+        return pos_is_reached
 
     def send_line(self, _str):
         self.stopping_timer = None

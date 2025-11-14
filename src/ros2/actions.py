@@ -28,8 +28,24 @@ class Ros2Actions():
             tmp_list.append('j')
             tmp_list.append(0.05)
             poses.append(tmp_list)
+        
+        max_pose_size = 100
+        while len(poses) > max_pose_size:
+            small_poses = poses[:max_pose_size]
+            poses = poses[max_pose_size:]
 
-        # Run the blocking function in a separate thread
+            self.node.ur.path(
+                small_poses,
+                False,
+                False,
+                0.5,  # Accelertaion
+                0.5,  # Speed
+                False
+            )
+
+            self.node.ros2_timers.timer_main_loop_blocking(small_poses[-1][:6])
+
+        # Run the final part of the trajectory
         self.node.ur.path(
             poses,
             False,

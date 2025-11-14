@@ -3,6 +3,7 @@ from ..ur.class_ur import UR
 from .timers import Ros2Timers
 from .actions import Ros2Actions
 from .publishers import Ros2Publishers
+from .services import Ros2Services
 from .subscribers import Ros2Subscribers
 import ipaddress
 
@@ -20,7 +21,10 @@ class URNode(Node):
 
         self.ros2_subscribers = Ros2Subscribers(self)
 
+        self.ros2_services = Ros2Services(self)
+
         self.ros2_actions = Ros2Actions(self)
+        
     
     def get_ip(self) -> str | None:
         custom_ip: str | None

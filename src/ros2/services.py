@@ -1,4 +1,4 @@
-from arduino_command_messages.srv.ur_srv import SetPayload
+from arduino_command_messages.srv import SetPayload
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:

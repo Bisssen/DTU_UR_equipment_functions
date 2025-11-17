@@ -1,4 +1,4 @@
-from TODO.srv import TODO
+from arduino_command_messages.srv.ur_srv import SetPayload
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -12,18 +12,18 @@ class Ros2Services():
         # Change to service
         self.payload_setter_subscriber =\
         self.node.create_service(
-            TODO,
+            SetPayload,
             'set_payload',
             self.payload_setter_callback
         )
 
     def payload_setter_callback(
             self,
-            request: TODO.Request,
-            response: TODO.Response) -> TODO.Response:
-        payload = request.data
+            request: SetPayload.Request,
+            response: SetPayload.Response) -> SetPayload.Response:
+        payload = request.payload
         self.node.ur.set_payload_weight(payload)
-        response.data = True
+        response.success = True
         return response
 
 

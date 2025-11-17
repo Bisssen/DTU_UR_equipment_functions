@@ -28,26 +28,28 @@ class Ros2Actions():
             tmp_list.append('j')
             tmp_list.append(0.05)
             joints.append(tmp_list)
-        
+
         max_pose_size = 100
         while len(joints) > max_pose_size:
             small_joints = joints[:max_pose_size]
             joints = joints[max_pose_size:]
 
-            self.node.ur.path(
-                small_joints,
-                False,
-                False,
-                0.5,  # Accelertaion
-                0.5,  # Speed
-                False
-            )
+            self.follow_joints_list(small_joints)
 
-            self.node.ros2_timers.timer_main_loop_blocking(small_joints[-1][:6])
+        
+        self.follow_joints_list(joints)
 
+        self.node.get_logger().info(f'Done with movement')
+
+        goal_handle.succeed()
+    
+        return FollowJointTrajectory.Result()
+
+
+    def follow_joints_list(self, joints_list: list[float]) -> None:
         # Run the final part of the trajectory
         self.node.ur.path(
-            joints,
+            joints_list,
             False,
             False,
             0.5,  # Accelertaion
@@ -57,11 +59,4 @@ class Ros2Actions():
 
         # Keep the main loop running, but block the code until
         # The UR executes its movement.
-        self.node.ros2_timers.timer_main_loop_blocking(final_joints)
-
-        self.node.get_logger().info(f'Done with movement')
-
-        goal_handle.succeed()
-    
-        return FollowJointTrajectory.Result()
-
+        self.node.ros2_timers.timer_main_loop_blocking(joints_list[-1][:6])

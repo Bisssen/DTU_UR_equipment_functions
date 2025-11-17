@@ -3,6 +3,7 @@ from math import pi, cos, sin
 import numpy as np
 import socket
 import sys
+import cv2
 
 from . import config_ur
 from .communication_ur import communication_thread
@@ -265,14 +266,17 @@ class UR:
     # Poses must contain the 6 positions and
     # a mode in the form linear, l or joint, j
     def path(self, poses, transform=True, relative=False,
-             acc=0.5, speed=0.1, wait=False):
+             acc=0.5, speed=0.1, wait=False, r=0.05):
         # List containing all the valid data
         data = []
 
+        second_last_point = self.get_second_last_point(poses, r)
+        print(second_last_point)
+        print(len(poses))
         # Convert the poses to the correct data
         for pose in poses:
             if pose[7] is None:
-                pose[7] = 0.001
+                pose[7] = False
             if pose[6][0] == 'l':
                 data.append([self.generate_move(x=pose[0], y=pose[1], z=pose[2],
                                                 rx=pose[3], ry=pose[4], rz=pose[5],
@@ -291,18 +295,28 @@ class UR:
         # Start of the function
         send_string = 'def follow_path():\n'
 
-        for pose in data[:-1]:
+        for i, pose in enumerate(data):
+            if len(data) - 30 <= i:
+                r = 0.0
             if pose[1] == 'j':
-                send_string += f'    move{pose[1]}({pose[0]},{acc},{speed},r={pose[2]})\n'
+                send_string += f'    move{pose[1]}({pose[0]},{acc},{speed},r={r})\n'
             else:
-                send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={pose[2]})\n'
-        
-        pose = data[-1]
-        if pose[1] == 'j':
-            send_string += f'    move{pose[1]}({pose[0]},{acc},{speed})\n'
-        else:
-            send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed})\n'
+                send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={r})\n'
+    
+        # pose = data[-1]
+        # if pose[1] == 'j':
+        #     # send_string += f'    sleep(2)\n'
+        #     send_string += f'    move{pose[1]}({pose[0]},{acc},{speed},r={0})\n'
+        #     send_string += f'    move{pose[1]}({pose[0]},{acc},{speed},r={0})\n'
+        #     send_string += f'    move{pose[1]}({pose[0]},{acc},{speed},r={0})\n'
+        #     send_string += f'    move{pose[1]}({pose[0]},{acc},{speed},r={0})\n'
+        # else:
+        #     send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={0})\n'
+        #     send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={0})\n'
+        #     send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={0})\n'
+        #     send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={0})\n'
 
+        send_string += f'    sync()\n'
         send_string += 'end\n'
 
 
@@ -567,6 +581,73 @@ class UR:
     def shutdown(self):
         self.communication_thread.shutdown()
 
+    def get_second_last_point(self, joints_list: list[list[float]], r: float)-> int:
+        end_point = self.node.ros2_services.get_fk(joints_list[-1]).pose_stamped
+        # end_point = fwdkin(joints_list[-1])[0]
+        print('---- end point:')
+        print(end_point)
+        for i, joints in enumerate(joints_list):
+            print(f'----- current point: {i}')
+            current_point = self.node.ros2_services.get_fk(joints).pose_stamped
+            # current_point = fwdkin(joints)[0]
+
+            if distance_3d_squared(end_point, current_point) < r**2:
+                print('----- current point:')
+                print(current_point)
+                return i
+        
+        return len(joints_list) - 1
+
+
+def fwdkin(v):
+    # Magic
+    v1 = v[0]/180 * np.pi
+    v2 = v[1]/180 * np.pi
+    v3 = v[2]/180 * np.pi
+    v4 = v[3]/180 * np.pi
+    v5 = v[4]/180 * np.pi
+    v6 = v[5]/180 * np.pi
+    ## UR5
+    a = [0.00000, -0.42500, -0.39243,  0.00000,  0.00000,  0.0000]
+    d = [0.08920,  0.00000,  0.00000,  0.10900,  0.09300,  0.0820]
+    ## UR10
+    a = [0.00000, -0.612, -0.5723,  0.00000,  0.00000,  0.0000]
+    d = [0.1273,  0.00000,  0.00000,  0.163941,  0.1157,  0.0922]
+    T12 = [[np.cos(v1), 0, np.sin(v1), 0],
+           [np.sin(v1), 0, -np.cos(v1), 0],
+           [0, 1, 0, d[0]], [0, 0, 0, 1]]
+    T23 = [[np.cos(v2), -np.sin(v2), 0, a[1] * np.cos(v2)],
+           [np.sin(v2), np.cos(v2), 0, a[1] * np.sin(v2)],
+           [0, 0, 1, 0], [0, 0, 0, 1]]
+    T34 = [[np.cos(v3), -np.sin(v3), 0, a[2] * np.cos(v3)],
+           [np.sin(v3), np.cos(v3), 0, a[2] * np.sin(v3)],
+           [0, 0, 1, 0], [0, 0, 0, 1]]
+    T45 = [[np.cos(v4), 0, np.sin(v4), 0],
+           [np.sin(v4), 0, -np.cos(v4), 0],
+           [0, 1, 0, d[3]], [0, 0, 0, 1]]
+    T56 = [[np.cos(v5), 0, -np.sin(v5), 0],
+           [np.sin(v5), 0, np.cos(v5), 0],
+           [0, -1, 0, d[4]], [0, 0, 0, 1]]
+    T67 = [[np.cos(v6), -np.sin(v6), 0, 0],
+           [np.sin(v6), np.cos(v6), 0, 0],
+           [0, 0, 1, d[5]], [0, 0, 0, 1]]
+    T = np.matmul(T12, T23)
+    T = np.matmul(T, T34)
+    T = np.matmul(T, T45)
+    T = np.matmul(T, T56)
+    T = np.matmul(T, T67)
+
+    Tnew = T[0:3, 0:3]
+    # tmp = rotation_matrix_to_rodrigues(Tnew)
+    
+    rvec, rvec2 = cv2.Rodrigues(Tnew)
+    # rvec = tmp
+    print('pos: ')
+    print(T[0:3, 3], rvec)
+
+
+    return T[0:3, 3], rvec
+
 
 class DH:
     def __init__(self, a, d, alpha):
@@ -608,3 +689,41 @@ def pose_to_transmat(pose):
     M[:3,:3] = rodrigues_vec_to_rotation_mat(pose[3:]) # rotation part
     M[:3,3] = np.transpose(pose[:3]) # translation part
     return M
+
+
+
+def distance_3d_squared(point1: list[float], point2: list[float]) -> float:
+    return (point2[0] - point1[0])**2 +\
+           (point2[1] - point1[1])**2 +\
+           (point2[2] - point1[2])**2
+
+
+
+def rotation_matrix_to_rodrigues(R):
+    """
+    Convert a 3x3 rotation matrix to a Rodrigues rotation vector.
+    
+    Parameters:
+        R (np.ndarray): 3x3 rotation matrix.
+    
+    Returns:
+        np.ndarray: 3x1 Rodrigues rotation vector.
+    """
+    # Ensure R is a numpy array
+    R = np.asarray(R)
+    
+    # Compute angle
+    theta = np.arccos((np.trace(R) - 1) / 2.0)
+    
+    if np.isclose(theta, 0):
+        return np.zeros(3)  # No rotation
+    
+    # Compute axis
+    rx = (R[2,1] - R[1,2]) / (2*np.sin(theta))
+    ry = (R[0,2] - R[2,0]) / (2*np.sin(theta))
+    rz = (R[1,0] - R[0,1]) / (2*np.sin(theta))
+    
+    axis = np.array([rx, ry, rz])
+    
+    # Rodrigues vector = axis * angle
+    return axis * theta

@@ -19,25 +19,25 @@ class Ros2Actions():
     def execute_callback(self, goal_handle) -> None:
         trajectory = goal_handle.request.trajectory
 
-        final_joints = list(trajectory.points[-1])
-        self.node.get_logger().info(f'Received movement command to joint position: {final_joints}')
-
-        joints = []        
+        joints_list = []        
         for point in trajectory.points:
             tmp_list = list(point.positions)
             tmp_list.append('j')
             tmp_list.append(0.05)
-            joints.append(tmp_list)
+            joints_list.append(tmp_list)
 
-        max_pose_size = 100
-        while len(joints) > max_pose_size:
-            small_joints = joints[:max_pose_size]
-            joints = joints[max_pose_size:]
+        final_joints = list(joints_list[-1][:6])
+        self.node.get_logger().info(f'Received movement command to joint position: {final_joints}')
+
+        max_pose_size = 10000000
+        while len(joints_list) > max_pose_size:
+            small_joints = joints_list[:max_pose_size]
+            joints_list = joints_list[max_pose_size:]
 
             self.follow_joints_list(small_joints)
 
         
-        self.follow_joints_list(joints)
+        self.follow_joints_list(joints_list)
 
         self.node.get_logger().info(f'Done with movement')
 

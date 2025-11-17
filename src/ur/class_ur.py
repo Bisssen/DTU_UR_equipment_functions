@@ -544,6 +544,17 @@ class UR:
 
         return pos_is_reached
 
+    def check_if_joints_is_reached(self, joints: list[float], tolerance: float = 0.1) -> bool:
+        current_joints = self.get_joints()
+
+        joints_is_reached = True
+        for current_joints, desired_joints in zip(current_joints, joints):
+            if abs(current_joints - desired_joints) > tolerance:
+                joints_is_reached = False
+                break
+
+        return joints_is_reached
+
     def send_line(self, _str):
         self.stopping_timer = None
         if type(_str) is str:

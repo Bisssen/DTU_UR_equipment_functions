@@ -45,11 +45,11 @@ class Ros2Timers():
         self.publish_ur_data()
 
     
-    def timer_main_loop_blocking(self, desired_pos: list[float]) -> None:
+    def timer_main_loop_blocking(self, desired_joints: list[float]) -> None:
         '''
         Will run the timer_main_loop while blocking if the robot is still moving.
         This is used to keep the main loop running while the program is blocking
         during actions
         '''
-        while not self.node.ur.check_if_pos_is_reached(desired_pos):
+        while not self.node.ur.check_if_joints_is_reached(desired_joints):
             self.timer_main_loop()

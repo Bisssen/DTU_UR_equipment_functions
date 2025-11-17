@@ -68,7 +68,7 @@ DATA_MAP = {
 
 ###             VARIABLES             ###
 # Socket connection parameters
-IP = '192.38.66.248'
+IP = '192.168.2.100'
 PORT = 30003
 
 # The threshold for determining end of movement for older versions of RealTime

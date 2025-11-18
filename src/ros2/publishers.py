@@ -31,26 +31,6 @@ class Ros2Publishers():
                 False
             )
         )
-    
-    # def publish_ur_pose_velocity(self, pose_velocity: list[float]) -> None:
-    #     if not self.validate_list_size(pose_velocity, 6):
-    #         return
-    #     self.ur_pose_velocity_publisher.publish(self.convert_to_ros2_pose(pose_velocity))
-    
-    # def convert_to_ros2_pose(self, pose_list: list[float]) -> Pose:
-    #     pose = Pose()
-
-    #     pose.position.x = pose_list[0]
-    #     pose.position.y = pose_list[1]
-    #     pose.position.z = pose_list[2]
-
-    #     q = euler_to_quaternion(pose_list[3], pose_list[4], pose_list[5])
-
-    #     pose.orientation.x = q[0]
-    #     pose.orientation.y = q[1]
-    #     pose.orientation.z = q[2]
-    #     pose.orientation.w = q[3]
-    #     return pose
 
     def publish_ur_joints(self,
                           joints_list: list[float],
@@ -64,15 +44,6 @@ class Ros2Publishers():
             )
         )
 
-    # def publish_ur_joints_velocity(self, joints_velocity_list: list[float]) -> None:
-    #     if not self.validate_list_size(joints_velocity_list, 6):
-    #         return
-    #     self.ur_joints_velocity_publisher.publish(
-    #         self.convert_to_ros2_jointstate(
-    #             joints_velocity_list
-    #         )
-    #     )
-    
     def convert_to_ros2_jointstate(self,
                                    jointstate_list: list[float],
                                    velocity_list: list[float],
@@ -108,5 +79,3 @@ class Ros2Publishers():
             )
             return False
         return True
-# TODO make more publishers
-# I guess I can make more now, but at some point I will need to know what they should look like

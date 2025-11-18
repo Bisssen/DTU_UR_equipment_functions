@@ -68,7 +68,3 @@ class Ros2Subscribers():
     def payload_setter_callback(self, msg: Float32) -> None:
         payload = msg.data
         self.node.ur.set_payload_weight(payload)
-
-
-# TODO test trajectories. See if there kinda is a cap on the size
-#... how should it look

@@ -273,8 +273,7 @@ class UR:
             return
 
         second_last_point = self.get_second_last_point(poses, r)
-        print(second_last_point)
-        print(len(poses))
+
         # Convert the poses to the correct data
         for pose in poses:
             if pose[7] is None:
@@ -312,28 +311,10 @@ class UR:
         else:
             send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={r})\n'
         
-        
-        # pose = data[-1]
-        # if pose[1] == 'j':
-        #     # send_string += f'    sleep(2)\n'
-        #     send_string += f'    move{pose[1]}({pose[0]},{acc},{speed},r={0})\n'
-        #     send_string += f'    move{pose[1]}({pose[0]},{acc},{speed},r={0})\n'
-        #     send_string += f'    move{pose[1]}({pose[0]},{acc},{speed},r={0})\n'
-        #     send_string += f'    move{pose[1]}({pose[0]},{acc},{speed},r={0})\n'
-        # else:
-        #     send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={0})\n'
-        #     send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={0})\n'
-        #     send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={0})\n'
-        #     send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={0})\n'
-
-        send_string += f'    sleep(0.1)\n'
-        send_string += f'    sync()\n'
         send_string += 'end\n'
 
 
         self.send_line(send_string)
-
-        print(send_string.split('move')[-3:])
 
         self.moving_timer = time.time()
         if wait:
@@ -400,7 +381,9 @@ class UR:
             self.wait()
 
     def get_forward_kinematics(self):
-        pose = self.get_pose()
+        '''
+        I don't think this works?
+        '''
         return pose_to_transmat(self.get_pose())
 
     def read(self):
@@ -524,6 +507,10 @@ class UR:
             if self.ur_data['status'] == 1:
                 return False
         # Otherwise check if the arm is still moving
+        # This does not work very well. It is possible to tune it if
+        # and use it if the arm only moves fast, but it is very difficult
+        # to get it right if the arm is moving slowly
+        # Use check if joint is reached instead
         else:
             current_velocities = [self.ur_data[config_ur.V_B],
                                   self.ur_data[config_ur.V_S],
@@ -532,11 +519,6 @@ class UR:
                                   self.ur_data[config_ur.V_W2],
                                   self.ur_data[config_ur.V_W3]]
             total_mean_velocity = 0
-            # velocity_series = [[1] * 20] * 6
-            # for i, velocity in enumerate(velocity_series):
-            #     velocity_series[i], velocity_mean = self.moving_average(velocity, current_velocities[i])
-            #     total_mean_velocity += abs(velocity_mean)
-
             for vel in current_velocities:
                 total_mean_velocity += abs(vel)
             total_mean_velocity *= 1/6
@@ -595,83 +577,28 @@ class UR:
         self.communication_thread.shutdown()
 
     def get_second_last_point(self, joints_list: list[list[float]], r: float)-> int:
-        # end_point = self.node.ros2_services.get_fk(joints_list[-1]).pose_stamped
+        '''
+        Calculates and returns the index of the last point in joints_list
+        that can be reached without skipping the last point with the given
+        r value
+        '''
         end_point = fwdkin(joints_list[-1])[0]
-        print('---- end point:')
-        print(end_point)
         for i, joints in enumerate(joints_list):
-            # current_point = self.node.ros2_services.get_fk(joints).pose_stamped
             current_point = fwdkin(joints)[0]
 
-            if distance_3d_squared(end_point, current_point) < (r**2)*2:
-                print('----- current point:')
-                print(current_point)
+            if distance_3d_squared(end_point, current_point) < r**2:
                 return i
         
         return len(joints_list) - 1
     
     def check_if_at_end_point(self, joints_list: list[list[float]]) -> bool:
+        '''
+        Returns true if the first and last position in joints_list is the same
+        '''
         for end_joint, start_joint in zip(joints_list[-1], joints_list[0]):
-            print(end_joint, start_joint)
             if not(end_joint == start_joint):
                 return False
-        
         return True
-
-
-
-def fwdkin(v, degrees=False):
-    # Magic
-    if degrees:
-        v1 = v[0]/180 * np.pi
-        v2 = v[1]/180 * np.pi
-        v3 = v[2]/180 * np.pi
-        v4 = v[3]/180 * np.pi
-        v5 = v[4]/180 * np.pi
-        v6 = v[5]/180 * np.pi
-    else:
-        v1 = v[0]
-        v2 = v[1]
-        v3 = v[2]
-        v4 = v[3]
-        v5 = v[4]
-        v6 = v[5]
-    ## UR5
-    a = [0.00000, -0.42500, -0.39243,  0.00000,  0.00000,  0.0000]
-    d = [0.08920,  0.00000,  0.00000,  0.10900,  0.09300,  0.0820]
-    ## UR10
-    a = [0.00000, -0.612, -0.5723,  0.00000,  0.00000,  0.0000]
-    d = [0.1273,  0.00000,  0.00000,  0.163941,  0.1157,  0.0922]
-    T12 = [[np.cos(v1), 0, np.sin(v1), 0],
-           [np.sin(v1), 0, -np.cos(v1), 0],
-           [0, 1, 0, d[0]], [0, 0, 0, 1]]
-    T23 = [[np.cos(v2), -np.sin(v2), 0, a[1] * np.cos(v2)],
-           [np.sin(v2), np.cos(v2), 0, a[1] * np.sin(v2)],
-           [0, 0, 1, 0], [0, 0, 0, 1]]
-    T34 = [[np.cos(v3), -np.sin(v3), 0, a[2] * np.cos(v3)],
-           [np.sin(v3), np.cos(v3), 0, a[2] * np.sin(v3)],
-           [0, 0, 1, 0], [0, 0, 0, 1]]
-    T45 = [[np.cos(v4), 0, np.sin(v4), 0],
-           [np.sin(v4), 0, -np.cos(v4), 0],
-           [0, 1, 0, d[3]], [0, 0, 0, 1]]
-    T56 = [[np.cos(v5), 0, -np.sin(v5), 0],
-           [np.sin(v5), 0, np.cos(v5), 0],
-           [0, -1, 0, d[4]], [0, 0, 0, 1]]
-    T67 = [[np.cos(v6), -np.sin(v6), 0, 0],
-           [np.sin(v6), np.cos(v6), 0, 0],
-           [0, 0, 1, d[5]], [0, 0, 0, 1]]
-    T = np.matmul(T12, T23)
-    T = np.matmul(T, T34)
-    T = np.matmul(T, T45)
-    T = np.matmul(T, T56)
-    T = np.matmul(T, T67)
-
-    Tnew = T[0:3, 0:3]
-    rvec = rotation_matrix_to_rodrigues(Tnew)
-    
-    # rvec, rvec2 = cv2.Rodrigues(Tnew)
-
-    return T[0:3, 3], rvec
 
 
 class DH:
@@ -723,8 +650,60 @@ def distance_3d_squared(point1: list[float], point2: list[float]) -> float:
            (point2[2] - point1[2])**2
 
 
+def fwdkin(v, degrees=False):
+    if degrees:
+        v1 = v[0]/180 * np.pi
+        v2 = v[1]/180 * np.pi
+        v3 = v[2]/180 * np.pi
+        v4 = v[3]/180 * np.pi
+        v5 = v[4]/180 * np.pi
+        v6 = v[5]/180 * np.pi
+    else:
+        v1 = v[0]
+        v2 = v[1]
+        v3 = v[2]
+        v4 = v[3]
+        v5 = v[4]
+        v6 = v[5]
+    ## UR5
+    a = [0.00000, -0.42500, -0.39243,  0.00000,  0.00000,  0.0000]
+    d = [0.08920,  0.00000,  0.00000,  0.10900,  0.09300,  0.0820]
+    ## UR10
+    a = [0.00000, -0.612, -0.5723,  0.00000,  0.00000,  0.0000]
+    d = [0.1273,  0.00000,  0.00000,  0.163941,  0.1157,  0.0922]
+    ## Can be found here: https://www.universal-robots.com/articles/ur/application-installation/dh-parameters-for-calculations-of-kinematics-and-dynamics/
+    # for different robot arms
+    T12 = [[np.cos(v1), 0, np.sin(v1), 0],
+           [np.sin(v1), 0, -np.cos(v1), 0],
+           [0, 1, 0, d[0]], [0, 0, 0, 1]]
+    T23 = [[np.cos(v2), -np.sin(v2), 0, a[1] * np.cos(v2)],
+           [np.sin(v2), np.cos(v2), 0, a[1] * np.sin(v2)],
+           [0, 0, 1, 0], [0, 0, 0, 1]]
+    T34 = [[np.cos(v3), -np.sin(v3), 0, a[2] * np.cos(v3)],
+           [np.sin(v3), np.cos(v3), 0, a[2] * np.sin(v3)],
+           [0, 0, 1, 0], [0, 0, 0, 1]]
+    T45 = [[np.cos(v4), 0, np.sin(v4), 0],
+           [np.sin(v4), 0, -np.cos(v4), 0],
+           [0, 1, 0, d[3]], [0, 0, 0, 1]]
+    T56 = [[np.cos(v5), 0, -np.sin(v5), 0],
+           [np.sin(v5), 0, np.cos(v5), 0],
+           [0, -1, 0, d[4]], [0, 0, 0, 1]]
+    T67 = [[np.cos(v6), -np.sin(v6), 0, 0],
+           [np.sin(v6), np.cos(v6), 0, 0],
+           [0, 0, 1, d[5]], [0, 0, 0, 1]]
+    T = np.matmul(T12, T23)
+    T = np.matmul(T, T34)
+    T = np.matmul(T, T45)
+    T = np.matmul(T, T56)
+    T = np.matmul(T, T67)
 
-def rotation_matrix_to_rodrigues(R):
+    Tnew = T[0:3, 0:3]
+    rvec = rotation_matrix_to_rodrigues(Tnew)
+
+    return T[0:3, 3], rvec
+
+
+def rotation_matrix_to_rodrigues(R: np.ndarray) -> np.ndarray:
     """
     Convert a 3x3 rotation matrix to a Rodrigues rotation vector.
     
@@ -733,6 +712,8 @@ def rotation_matrix_to_rodrigues(R):
     
     Returns:
         np.ndarray: 3x1 Rodrigues rotation vector.
+
+    From ChatGTP but works
     """
     # Ensure R is a numpy array
     R = np.asarray(R)

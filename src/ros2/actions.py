@@ -29,14 +29,6 @@ class Ros2Actions():
         final_joints = list(joints_list[-1][:6])
         self.node.get_logger().info(f'Received movement command to joint position: {final_joints}')
 
-        max_pose_size = 10000000
-        while len(joints_list) > max_pose_size:
-            small_joints = joints_list[:max_pose_size]
-            joints_list = joints_list[max_pose_size:]
-
-            self.follow_joints_list(small_joints)
-
-        
         self.follow_joints_list(joints_list)
 
         self.node.get_logger().info(f'Done with movement')
@@ -44,7 +36,6 @@ class Ros2Actions():
         goal_handle.succeed()
     
         return FollowJointTrajectory.Result()
-
 
     def follow_joints_list(self, joints_list: list[float]) -> None:
         # Run the final part of the trajectory

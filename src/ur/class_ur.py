@@ -3,7 +3,6 @@ from math import pi, cos, sin
 import numpy as np
 import socket
 import sys
-import cv2
 
 from . import config_ur
 from .communication_ur import communication_thread
@@ -270,6 +269,9 @@ class UR:
         # List containing all the valid data
         data = []
 
+        if self.check_if_at_end_point(poses):
+            return
+
         second_last_point = self.get_second_last_point(poses, r)
         print(second_last_point)
         print(len(poses))
@@ -296,13 +298,21 @@ class UR:
         send_string = 'def follow_path():\n'
 
         for i, pose in enumerate(data):
-            if len(data) - 30 <= i:
+            # Skip the last points once we are close enough
+            if second_last_point - 1 <= i:
                 r = 0.0
+                break
             if pose[1] == 'j':
                 send_string += f'    move{pose[1]}({pose[0]},{acc},{speed},r={r})\n'
             else:
                 send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={r})\n'
-    
+        pose = data[-1]
+        if pose[1] == 'j':
+            send_string += f'    move{pose[1]}({pose[0]},{acc},{speed},r={r})\n'
+        else:
+            send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={r})\n'
+        
+        
         # pose = data[-1]
         # if pose[1] == 'j':
         #     # send_string += f'    sleep(2)\n'
@@ -316,11 +326,14 @@ class UR:
         #     send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={0})\n'
         #     send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={0})\n'
 
+        send_string += f'    sleep(0.1)\n'
         send_string += f'    sync()\n'
         send_string += 'end\n'
 
 
         self.send_line(send_string)
+
+        print(send_string.split('move')[-3:])
 
         self.moving_timer = time.time()
         if wait:
@@ -582,31 +595,47 @@ class UR:
         self.communication_thread.shutdown()
 
     def get_second_last_point(self, joints_list: list[list[float]], r: float)-> int:
-        end_point = self.node.ros2_services.get_fk(joints_list[-1]).pose_stamped
-        # end_point = fwdkin(joints_list[-1])[0]
+        # end_point = self.node.ros2_services.get_fk(joints_list[-1]).pose_stamped
+        end_point = fwdkin(joints_list[-1])[0]
         print('---- end point:')
         print(end_point)
         for i, joints in enumerate(joints_list):
-            print(f'----- current point: {i}')
-            current_point = self.node.ros2_services.get_fk(joints).pose_stamped
-            # current_point = fwdkin(joints)[0]
+            # current_point = self.node.ros2_services.get_fk(joints).pose_stamped
+            current_point = fwdkin(joints)[0]
 
-            if distance_3d_squared(end_point, current_point) < r**2:
+            if distance_3d_squared(end_point, current_point) < (r**2)*2:
                 print('----- current point:')
                 print(current_point)
                 return i
         
         return len(joints_list) - 1
+    
+    def check_if_at_end_point(self, joints_list: list[list[float]]) -> bool:
+        for end_joint, start_joint in zip(joints_list[-1], joints_list[0]):
+            print(end_joint, start_joint)
+            if not(end_joint == start_joint):
+                return False
+        
+        return True
 
 
-def fwdkin(v):
+
+def fwdkin(v, degrees=False):
     # Magic
-    v1 = v[0]/180 * np.pi
-    v2 = v[1]/180 * np.pi
-    v3 = v[2]/180 * np.pi
-    v4 = v[3]/180 * np.pi
-    v5 = v[4]/180 * np.pi
-    v6 = v[5]/180 * np.pi
+    if degrees:
+        v1 = v[0]/180 * np.pi
+        v2 = v[1]/180 * np.pi
+        v3 = v[2]/180 * np.pi
+        v4 = v[3]/180 * np.pi
+        v5 = v[4]/180 * np.pi
+        v6 = v[5]/180 * np.pi
+    else:
+        v1 = v[0]
+        v2 = v[1]
+        v3 = v[2]
+        v4 = v[3]
+        v5 = v[4]
+        v6 = v[5]
     ## UR5
     a = [0.00000, -0.42500, -0.39243,  0.00000,  0.00000,  0.0000]
     d = [0.08920,  0.00000,  0.00000,  0.10900,  0.09300,  0.0820]
@@ -638,13 +667,9 @@ def fwdkin(v):
     T = np.matmul(T, T67)
 
     Tnew = T[0:3, 0:3]
-    # tmp = rotation_matrix_to_rodrigues(Tnew)
+    rvec = rotation_matrix_to_rodrigues(Tnew)
     
-    rvec, rvec2 = cv2.Rodrigues(Tnew)
-    # rvec = tmp
-    print('pos: ')
-    print(T[0:3, 3], rvec)
-
+    # rvec, rvec2 = cv2.Rodrigues(Tnew)
 
     return T[0:3, 3], rvec
 

@@ -1,4 +1,4 @@
-from arduino_command_messages.srv import SetPayload
+from arduino_command_messages.srv import SetFloat
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -12,16 +12,49 @@ class Ros2Services():
         # Change to service
         self.payload_setter_subscriber =\
         self.node.create_service(
-            SetPayload,
+            SetFloat,
             'set_payload',
             self.payload_setter_callback
         )
 
+        # It is actually velocity but whatever
+        self.speed_setter_subscriber =\
+        self.node.create_service(
+            SetFloat,
+            'set_speed',
+            self.speed_setter_callback
+        )
+
+        self.acceleration_setter_subscriber =\
+        self.node.create_service(
+            SetFloat,
+            'set_acceleration',
+            self.acceleration_setter_callback
+        )
+
     def payload_setter_callback(
             self,
-            request: SetPayload.Request,
-            response: SetPayload.Response) -> SetPayload.Response:
-        payload = request.payload
+            request: SetFloat.Request,
+            response: SetFloat.Response) -> SetFloat.Response:
+        payload = request.float
         self.node.ur.set_payload_weight(payload)
+        response.success = True
+        return response
+
+    def speed_setter_callback(
+            self,
+            request: SetFloat.Request,
+            response: SetFloat.Response) -> SetFloat.Response:
+        speed = request.float
+        self.node.ur.set_default_path_speed(speed)
+        response.success = True
+        return response
+
+    def acceleration_setter_callback(
+            self,
+            request: SetFloat.Request,
+            response: SetFloat.Response) -> SetFloat.Response:
+        acceleration = request.float
+        self.node.ur.set_default_path_acceleration(acceleration)
         response.success = True
         return response

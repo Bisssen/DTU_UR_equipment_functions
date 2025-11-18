@@ -20,6 +20,19 @@ class UR:
 
         self.non_blocking_start_time: float | None = None
 
+        # Timer that keeps track of when the robot just started moving
+        self.moving_timer: None|float = None
+
+        self.stopping_timer: None|float = None
+        self.stopping_time = 1.0
+
+        # Default speed used for path generation
+        self._default_path_speed: float = 0.1
+        self._default_path_acceleration: float = 0.5
+
+        # Counter that gives the path functions unique names
+        self.path_counter = 0
+
         # Transformation to task
         self.task_transform = None
         if 'TRANSFORM' in config_ur.__dict__:
@@ -45,14 +58,6 @@ class UR:
 
         # Dictionary containing all the ur data which have been reading
         self.ur_data = {}
-
-        # Timer that keeps track of when the robot just started moving
-        self.moving_timer: None|float = None
-
-        self.stopping_timer: None|float = None
-        self.stopping_time = 1.0
-
-        self.temp_timer = 0.0
 
         # Connecting socket directly to robot
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -265,15 +270,51 @@ class UR:
     # Poses must contain the 6 positions and
     # a mode in the form linear, l or joint, j
     def path(self, poses, transform=True, relative=False,
-             acc=0.5, speed=0.1, wait=False, r=0.05):
-        # List containing all the valid data
-        data = []
-
+             acc=0.5, speed=None, wait=False, r=0.05) -> None:
+        if speed is None:
+            speed = self._default_path_speed
+        if acc is None:
+            acc = self._default_path_acceleration
+        
         if self.check_if_at_end_point(poses):
             return
 
-        second_last_point = self.get_second_last_point(poses, r)
+        data = self.get_path_data(poses, transform, relative)
+        if len(data) == 0:
+            return
+        # Send the actual commands that needs to be sent to move the path
+        # Start of the function
+        send_string = f'def follow_path_{self.path_counter}():\n'
+        self.path_counter += 1
 
+        second_last_point = self.get_second_last_point(poses, r)
+        for i, pose in enumerate(data):
+            # Skip the last points once we are close enough
+            if second_last_point - 1 <= i:
+                r = 0.0
+                break
+            send_string += self.generate_move_string(pose, acc, speed, r)
+
+        # Add the final position
+        send_string += self.generate_move_string(data[-1], acc, speed, r)
+        send_string += 'end\n'
+
+        self.send_line(send_string)
+
+        self.moving_timer = time.time()
+        if wait:
+            self.wait()
+    
+    def get_path_data(
+            self,
+            poses: list[float | str],
+            transform: bool,
+            relative: bool) -> list[float | str]:
+        '''
+        Generates the right pose data, based on the transform and relative flag
+        '''
+        # List containing all the valid data
+        data = []
         # Convert the poses to the correct data
         for pose in poses:
             if pose[7] is None:
@@ -290,35 +331,20 @@ class UR:
                                                 relative=relative), 'j', pose[7]])
             else:
                 self.node.get_logger().error('UR: "mode" must be either \'l\', \'linear\', \'j\' or \'joint\'')
-                return
-
-        # Send the actual commands that needs to be sent to move the path
-        # Start of the function
-        send_string = 'def follow_path():\n'
-
-        for i, pose in enumerate(data):
-            # Skip the last points once we are close enough
-            if second_last_point - 1 <= i:
-                r = 0.0
-                break
-            if pose[1] == 'j':
-                send_string += f'    move{pose[1]}({pose[0]},{acc},{speed},r={r})\n'
-            else:
-                send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={r})\n'
-        pose = data[-1]
+                return data
+        return data
+    
+    def generate_move_string(
+            self,
+            pose: list[float | str],
+            acc: float,
+            speed: float,
+            r: float) -> str:
         if pose[1] == 'j':
-            send_string += f'    move{pose[1]}({pose[0]},{acc},{speed},r={r})\n'
+            send_string = f'    move{pose[1]}({pose[0]},{acc},{speed},r={r})\n'
         else:
-            send_string += f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={r})\n'
-        
-        send_string += 'end\n'
-
-
-        self.send_line(send_string)
-
-        self.moving_timer = time.time()
-        if wait:
-            self.wait()
+            send_string = f'    move{pose[1]}(p{pose[0]},{acc},{speed},r={r})\n'
+        return send_string
     
     def set_payload_weight(self, weight: float) -> None:
         command = 'def set_payload():\n' +\
@@ -523,11 +549,6 @@ class UR:
                 total_mean_velocity += abs(vel)
             total_mean_velocity *= 1/6
 
-
-            if self.temp_timer + 1 < time.time():
-                self.temp_timer = time.time()
-                print(total_mean_velocity, config_ur.VELOCITY_MEAN_THRESHOLD, self.stopping_timer)
-
             if total_mean_velocity > config_ur.VELOCITY_MEAN_THRESHOLD:
                 self.stopping_timer = None
                 return True
@@ -600,6 +621,11 @@ class UR:
                 return False
         return True
 
+    def set_default_path_speed(self, speed: float) -> None:
+        self._default_path_speed = speed
+
+    def set_default_path_acceleration(self, acceleration: float) -> None:
+        self._default_path_acceleration = acceleration
 
 class DH:
     def __init__(self, a, d, alpha):

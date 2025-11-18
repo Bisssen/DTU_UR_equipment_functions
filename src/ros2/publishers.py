@@ -69,8 +69,7 @@ class Ros2Publishers():
         msg.data = is_moving
         self.is_ur_moving_publisher.publish(msg)
 
-
-    def validate_list_size(self, _list:list[float], size=6) -> bool:
+    def validate_list_size(self, _list: list[float], size=6) -> bool:
         if not len(_list) == size:
             self.node.get_logger().error(
                 f'Trying to publish list: {_list} '

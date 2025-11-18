@@ -627,6 +627,10 @@ class UR:
     def set_default_path_acceleration(self, acceleration: float) -> None:
         self._default_path_acceleration = acceleration
 
+# Both DH and fwdkin works to get forward kinematics
+# DH is a bit more of a general implementation where
+# You provide the robot specifications
+# while fwdkin is hardcoded
 class DH:
     def __init__(self, a, d, alpha):
         self.a = a
@@ -644,6 +648,9 @@ class DH:
             T = np.matmul(T, M_i)
         return T
 
+    def get_forward_kinematics(self, joints: list[float]) -> tuple[list[float]]:
+        T = self.calculate_forward_kinematics(joints)
+        return T[0:3, 3], rotation_matrix_to_rodrigues(T[0:3, 0:3])
 
 def rodrigues_vec_to_rotation_mat(rodrigues_vec):
     theta = np.linalg.norm(rodrigues_vec)
@@ -662,12 +669,12 @@ def rodrigues_vec_to_rotation_mat(rodrigues_vec):
         rotation_mat = cos(theta) * I + (1 - cos(theta)) * r_rT + sin(theta) * r_cross
     return rotation_mat
 
+
 def pose_to_transmat(pose):
     M = np.identity(4) # initialize
     M[:3,:3] = rodrigues_vec_to_rotation_mat(pose[3:]) # rotation part
     M[:3,3] = np.transpose(pose[:3]) # translation part
     return M
-
 
 
 def distance_3d_squared(point1: list[float], point2: list[float]) -> float:
@@ -677,6 +684,9 @@ def distance_3d_squared(point1: list[float], point2: list[float]) -> float:
 
 
 def fwdkin(v, degrees=False):
+    '''
+    Return the forwards kinematics of a UR10
+    '''
     if degrees:
         v1 = v[0]/180 * np.pi
         v2 = v[1]/180 * np.pi

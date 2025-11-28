@@ -13,7 +13,7 @@ class Ros2Services():
         self.payload_setter_subscriber =\
         self.node.create_service(
             SetFloat,
-            'set_payload',
+            '/ur10/set_payload',
             self.payload_setter_callback
         )
 
@@ -21,14 +21,14 @@ class Ros2Services():
         self.speed_setter_subscriber =\
         self.node.create_service(
             SetFloat,
-            'set_speed',
+            '/ur10/set_speed',
             self.speed_setter_callback
         )
 
         self.acceleration_setter_subscriber =\
         self.node.create_service(
             SetFloat,
-            'set_acceleration',
+            '/ur10/set_acceleration',
             self.acceleration_setter_callback
         )
 

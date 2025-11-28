@@ -9,6 +9,7 @@ from std_msgs.msg import Header
 from builtin_interfaces.msg import Time, Duration
 import time
 import numpy as np
+import random
 
 class TrajectoryClient(Node):
 
@@ -27,14 +28,19 @@ class TrajectoryClient(Node):
             'shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint',
             'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint'
         ]
+        randomy = 1.0 * (random.random() * 2 -1)
+
         points_list =\
-            [[np.deg2rad(-156), np.deg2rad(-67), np.deg2rad(-25), np.deg2rad(-119), np.deg2rad(89), np.deg2rad(-112)],
-             [np.deg2rad(-156), np.deg2rad(-48), np.deg2rad(-46), np.deg2rad(-119), np.deg2rad(89), np.deg2rad(-112)],
-             [np.deg2rad(-179), np.deg2rad(-48), np.deg2rad(-46), np.deg2rad(-136), np.deg2rad(89), np.deg2rad(-112)]]#,
+            [\
+             [np.deg2rad(-179 + randomy) , np.deg2rad(-48 + randomy), np.deg2rad(-46 + randomy), np.deg2rad(-136 + randomy), np.deg2rad(89 + randomy), np.deg2rad(-112 + randomy)]]#,
             #  [-1.58, -2.84, 1.56, 1.83, 0.51, 1.58],
             #  [-1.68, -2.84, 1.56, 1.83, 0.51, 1.58],
             #  [-1.78, -2.84, 1.56, 1.83, 0.51, 1.58],
             #  [-1.88, -2.84, 1.56, 1.83, 0.51, 1.58]]
+        '''
+        [np.deg2rad(-156), np.deg2rad(-67), np.deg2rad(-25), np.deg2rad(-119), np.deg2rad(89), np.deg2rad(-112)],
+        [np.deg2rad(-156), np.deg2rad(-48), np.deg2rad(-46), np.deg2rad(-119), np.deg2rad(89), np.deg2rad(-112)],
+        '''
 
         for i, point_list in enumerate(points_list):
             point = JointTrajectoryPoint()
@@ -62,13 +68,12 @@ class TrajectoryClient(Node):
         self.get_logger().info('Goal accepted')
         self._get_result_future = self.goal_handle.get_result_async()
         self._get_result_future.add_done_callback(self.get_result_callback)
-        time.sleep(1)
+        # time.sleep(1)
         
-        # self.goal_handle.cancel_goal()
-        cancel_future = self.goal_handle.cancel_goal_async()
-        cancel_future.add_done_callback(self.cancel_done)
+        # cancel_future = self.goal_handle.cancel_goal_async()
+        # cancel_future.add_done_callback(self.cancel_done)
 
-        print('ccc')
+        # print('ccc')
 
     def cancel_done(self, future):
         cancel_response = future.result()
@@ -82,7 +87,8 @@ class TrajectoryClient(Node):
     def get_result_callback(self, future):
         result = future.result().result
         self.get_logger().info(f'Result received: {result}')
-        rclpy.shutdown()
+        self.send_goal()
+        time.sleep(1)
 
 def main(args=None):
     rclpy.init(args=args)

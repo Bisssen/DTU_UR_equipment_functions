@@ -30,7 +30,7 @@ class Ros2Actions():
             joints_list.append(tmp_list)
 
         final_joints = list(joints_list[-1][:6])
-        self.node.get_logger().info(f'Received movement command to joint position: {final_joints}')
+        self.node.get_logger().info(f'Received movement command to joint position: {final_joints} from position {self.node.ur.get_joints()}')
 
         self.follow_joints_list(goal_handle, joints_list)
 
@@ -44,8 +44,8 @@ class Ros2Actions():
             joints_list,
             False,
             False,
-            None,  # Accelertaion  (None means use default value)
-            None,  # Speed  (None means use default value)
+            0.05,  # Accelertaion  (None means use default value)
+            0.1,  # Speed  (None means use default value)
             False
         )
 

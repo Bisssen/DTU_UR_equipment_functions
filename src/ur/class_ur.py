@@ -277,10 +277,12 @@ class UR:
             acc = self._default_path_acceleration
         
         if self.check_if_at_end_point(poses):
+            print('Already at end position')
             return
 
         data = self.get_path_data(poses, transform, relative)
         if len(data) == 0:
+            print('No data')
             return
         # Send the actual commands that needs to be sent to move the path
         # Start of the function
@@ -298,6 +300,7 @@ class UR:
         # Add the final position
         send_string += self.generate_move_string(data[-1], acc, speed, r)
         send_string += 'end\n'
+        print(send_string)
 
         self.send_line(send_string)
 
@@ -616,7 +619,11 @@ class UR:
         '''
         Returns true if the first and last position in joints_list is the same
         '''
-        for end_joint, start_joint in zip(joints_list[-1], joints_list[0]):
+        start_joints = self.get_joints()
+        for end_joint, start_joint in zip(joints_list[-1], start_joints):
+            end_joint = round(end_joint, 2)
+            start_joint = round(start_joint, 2)
+            print(end_joint, start_joint)
             if not(end_joint == start_joint):
                 return False
         return True

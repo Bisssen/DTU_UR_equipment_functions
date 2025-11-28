@@ -369,7 +369,7 @@ class UR:
     def speed(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, 
                     b=0, s=0, e=0, w1=0, w2=0, w3=0, 
                     pose=None, mode='linear', transform=True,
-                    acc=0.5, time=1, wait=False):
+                    acc=0.5, duration=1, wait=False):
         if pose:
             if len(pose) != 6:
                 self.node.get_logger().error('UR: "pose" must consist of exactly 6 values.')
@@ -386,7 +386,7 @@ class UR:
             v_base = self.task_transform.dot(v_task)
             pose[:3] = v_base[:3] - t
 
-        self.socket.send((f'speed{mode[0]}({pose},{acc},{time})\n').encode())
+        self.socket.send((f'speed{mode[0]}({pose},{acc},{duration})\n').encode())
         self.moving_timer = time.time()
         if wait:
             self.wait()

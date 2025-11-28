@@ -1,11 +1,13 @@
 import rclpy
 from ur_code.src.ros2.node import URNode
+from rclpy.executors import MultiThreadedExecutor
 
 
 def main(args=None):
     rclpy.init(args=args)
     node = URNode()
-    rclpy.spin(node)
+    executor = MultiThreadedExecutor()
+    rclpy.spin(node, executor=executor)
     node.destroy_node()
     rclpy.shutdown()
 

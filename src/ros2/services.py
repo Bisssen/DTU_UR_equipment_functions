@@ -36,7 +36,7 @@ class Ros2Services():
             self,
             request: SetFloat.Request,
             response: SetFloat.Response) -> SetFloat.Response:
-        payload = request.float
+        payload = request.data
         self.node.ur.set_payload_weight(payload)
         response.success = True
         return response
@@ -45,7 +45,7 @@ class Ros2Services():
             self,
             request: SetFloat.Request,
             response: SetFloat.Response) -> SetFloat.Response:
-        speed = request.float
+        speed = request.data
         self.node.ur.set_default_path_speed(speed)
         response.success = True
         return response
@@ -54,7 +54,7 @@ class Ros2Services():
             self,
             request: SetFloat.Request,
             response: SetFloat.Response) -> SetFloat.Response:
-        acceleration = request.float
+        acceleration = request.data
         self.node.ur.set_default_path_acceleration(acceleration)
         response.success = True
         return response

@@ -14,7 +14,7 @@ class TrajectoryClient(Node):
 
     def __init__(self):
         super().__init__('trajectory_client')
-        self._action_client = ActionClient(self, FollowJointTrajectory, 'follow_joint_trajectory')
+        self._action_client = ActionClient(self, FollowJointTrajectory, '/ur10/follow_joint_trajectory')
 
     def send_goal(self):
         goal_msg = FollowJointTrajectory.Goal()
@@ -54,14 +54,30 @@ class TrajectoryClient(Node):
         self._send_goal_future.add_done_callback(self.goal_response_callback)
 
     def goal_response_callback(self, future):
-        goal_handle = future.result()
-        if not goal_handle.accepted:
+        self.goal_handle = future.result()
+        if not self.goal_handle.accepted:
             self.get_logger().info('Goal rejected')
             return
 
         self.get_logger().info('Goal accepted')
-        self._get_result_future = goal_handle.get_result_async()
+        self._get_result_future = self.goal_handle.get_result_async()
         self._get_result_future.add_done_callback(self.get_result_callback)
+        time.sleep(1)
+        
+        # self.goal_handle.cancel_goal()
+        cancel_future = self.goal_handle.cancel_goal_async()
+        cancel_future.add_done_callback(self.cancel_done)
+
+        print('ccc')
+
+    def cancel_done(self, future):
+        cancel_response = future.result()
+        if len(cancel_response.goals_canceling) > 0:
+            self.get_logger().info('Goal successfully canceled')
+        else:
+            self.get_logger().info('Goal failed to cancel')
+
+        rclpy.shutdown()
 
     def get_result_callback(self, future):
         result = future.result().result
@@ -71,12 +87,22 @@ class TrajectoryClient(Node):
 def main(args=None):
     rclpy.init(args=args)
     client = TrajectoryClient()
-    while True:
-        client.send_goal()
-        time.sleep(1)
+    # while True:
+    client.send_goal()
+    # time.sleep(1)
+    #cancel_goal()
+    rclpy.spin(client)
+        # try:
+        #     rclpy.spin(client)
         
-        rclpy.spin(client)
-        break
+        # except KeyboardInterrupt:
+        #     future = client._action_client._cancel_goal_async(client.goal_handle)
+        #     rclpy.spin_until_future_complete(client, future)
+        # finally:
+        #     client.destroy_node()
+        #     rclpy.shutdown()
+
+        # break
 
 if __name__ == '__main__':
     main()

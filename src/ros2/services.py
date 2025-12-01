@@ -1,4 +1,4 @@
-from arduino_command_messages.srv import SetFloat
+from ur_message_types.srv import SetFloat
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:

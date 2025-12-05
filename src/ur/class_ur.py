@@ -300,7 +300,6 @@ class UR:
         # Add the final position
         send_string += self.generate_move_string(data[-1], acc, speed, r)
         send_string += 'end\n'
-        print(send_string)
 
         self.send_line(send_string)
 

@@ -1,6 +1,7 @@
 from rclpy.action import ActionServer, CancelResponse
 from control_msgs.action import FollowJointTrajectory
 from rclpy.callback_groups import ReentrantCallbackGroup
+import time
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -9,6 +10,8 @@ if TYPE_CHECKING:
 class Ros2Actions():
     def __init__(self, node: 'URNode') -> None:
         self.node = node
+
+        self.wait_for_stopping_timer = None
 
         self.follow_trajectory_action = ActionServer(
             self.node,
@@ -44,8 +47,8 @@ class Ros2Actions():
             joints_list,
             False,
             False,
-            0.05,  # Accelertaion  (None means use default value)
-            0.1,  # Speed  (None means use default value)
+            None,  # Accelertaion  (None means use default value)
+            None,  # Speed  (None means use default value)
             False
         )
 
@@ -57,6 +60,11 @@ class Ros2Actions():
             ## Check cancelation
             if self.check_if_canceled(goal_handle):
                 return
+        
+        # Wait some extra time after the early detection to ensure the arm is stopped
+        self.wait_for_stopping_timer = time.time()
+        while self.wait_for_stopping_timer + 1 > time.time():
+            self.node.ros2_timers.timer_main_loop()
             
         goal_handle.succeed()
 

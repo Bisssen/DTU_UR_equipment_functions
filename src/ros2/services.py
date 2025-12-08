@@ -10,7 +10,7 @@ class Ros2Services():
         self.node = node
 
         # Change to service
-        self.payload_setter_subscriber =\
+        self.payload_setter_service =\
         self.node.create_service(
             SetFloat,
             '/ur10/set_payload',
@@ -18,14 +18,14 @@ class Ros2Services():
         )
 
         # It is actually velocity but whatever
-        self.speed_setter_subscriber =\
+        self.speed_setter_service =\
         self.node.create_service(
             SetFloat,
             '/ur10/set_speed',
             self.speed_setter_callback
         )
 
-        self.acceleration_setter_subscriber =\
+        self.acceleration_setter_service =\
         self.node.create_service(
             SetFloat,
             '/ur10/set_acceleration',

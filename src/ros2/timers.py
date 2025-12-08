@@ -6,7 +6,7 @@ class Ros2Timers():
     def __init__(self, node: 'URNode') -> None:
         self.node = node
 
-        self.timer_frequency = 1/200  # 20Hz
+        self.timer_frequency = 1/200  # 200Hz
         
         # Timers that replaces the threads that used to run the different socket connections
         ### NB This one MUST be quite fast, as it needs to keep the socket empty, for the data reading to work

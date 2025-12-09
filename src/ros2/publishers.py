@@ -11,7 +11,7 @@ from ..utils import euler_to_quaternion
 class Ros2Publishers():
     def __init__(self, node: 'URNode') -> None:
         self.node = node
-        self.ur_pose_publisher = self.node.create_publisher(JointState, 'ur_pose', 10)
+        self.ur_pose_publisher = self.node.create_publisher(JointState, '/ur10/ur_pose10', 10)
         # self.ur_pose_velocity_publisher = self.node.create_publisher(Pose, 'ur_pose_velocity', 10)
 
         self.ur_joints_publisher = self.node.create_publisher(JointState, '/ur10/joint_states_ur10', 10)

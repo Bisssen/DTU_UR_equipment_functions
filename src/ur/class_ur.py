@@ -622,7 +622,6 @@ class UR:
         for end_joint, start_joint in zip(joints_list[-1], start_joints):
             end_joint = round(end_joint, 2)
             start_joint = round(start_joint, 2)
-            print(end_joint, start_joint)
             if not(end_joint == start_joint):
                 return False
         return True

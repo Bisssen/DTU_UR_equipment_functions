@@ -22,7 +22,7 @@ class Ros2Actions():
             cancel_callback=self.cancel_callback
         )
 
-    def execute_callback(self, goal_handle) -> any:
+    def execute_callback(self, goal_handle: any) -> any:
         trajectory = goal_handle.request.trajectory
 
         joints_list = []        
@@ -41,7 +41,7 @@ class Ros2Actions():
     
         return FollowJointTrajectory.Result()
 
-    def follow_joints_list(self, goal_handle, joints_list: list[float]) -> None:
+    def follow_joints_list(self, goal_handle: any, joints_list: list[float]) -> None:
         # Run the final part of the trajectory
         self.node.ur.path(
             joints_list,
@@ -60,7 +60,9 @@ class Ros2Actions():
             ## Check cancelation
             if self.check_if_canceled(goal_handle):
                 return
-        
+
+            self.publish_feedback(goal_handle)
+
         # Wait some extra time after the early detection to ensure the arm is stopped
         self.wait_for_stopping_timer = time.time()
         while self.wait_for_stopping_timer + 1 > time.time():
@@ -68,7 +70,7 @@ class Ros2Actions():
             
         goal_handle.succeed()
 
-    def check_if_canceled(self, goal_handle) -> bool:
+    def check_if_canceled(self, goal_handle: any) -> bool:
         if goal_handle.is_cancel_requested:
             self.node.get_logger().info('Movement command canceled')
             goal_handle.canceled()
@@ -76,7 +78,14 @@ class Ros2Actions():
 
         return False
 
-    def cancel_callback(self, goal_handle) -> None:
+    def cancel_callback(self, goal_handle: any) -> None:
         # Stop the arm
         self.node.ur.speed(0, 0, 0, 0, 0, 0, transform=False, acc=1.0, wait=False)
         return CancelResponse.ACCEPT  # Allow cancellation
+    
+    def publish_feedback(self, goal_handle: any) -> None:
+        feedback_msg = FollowJointTrajectory.Feedback()
+        feedback_msg.actual.positions = self.node.ur.get_pose()
+        feedback_msg.actual.velocities = self.node.ur.get_pose_velocity(read=False)
+
+        goal_handle.publish(feedback_msg)

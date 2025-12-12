@@ -1,4 +1,5 @@
 from ur_message_types.srv import SetFloat
+import time
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -32,12 +33,18 @@ class Ros2Services():
             self.acceleration_setter_callback
         )
 
+        self.sleep_time = time.time()
+
     def payload_setter_callback(
             self,
             request: SetFloat.Request,
             response: SetFloat.Response) -> SetFloat.Response:
         payload = request.data
         self.node.ur.set_payload_weight(payload)
+        self.sleep_time = time.time()
+        while self.sleep_time + 1 > time.time():
+            self.node.ros2_timers.timer_main_loop()
+
         response.success = True
         return response
 

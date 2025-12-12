@@ -349,9 +349,9 @@ class UR:
         return send_string
     
     def set_payload_weight(self, weight: float) -> None:
-        command = 'def set_payload():\n' +\
-                  f'    set_payload_mass({weight})\n' +\
-                  'end\n'
+        command =  'def set_payload():\n' +\
+                  f'    set_payload({weight}, [0,0,0])\n' +\
+                   'end\n'
         self.send_line(command)
 
 

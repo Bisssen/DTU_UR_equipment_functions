@@ -64,6 +64,23 @@ class Ros2Subscribers():
         '''
         Send the ur to a specific joints state
         '''
+        # Format joints list similar to actions.py execute_callback
+        # The path function expects: [joint1, joint2, ..., joint6, 'j', time]
+        joints_list = list(msg.position)
+        joints_list.append('j')
+        joints_list.append(0.05)  # Time parameter (same as in actions.py)
+
+        self.node.get_logger().info(f'Received joint command to position: {list(msg.position)} from position {self.node.ur.get_joints()}')
+
+        # Execute the path with the formatted joints list
+        self.node.ur.path(
+            [joints_list],  # Wrap in list as path expects a list of waypoints
+            False,
+            False,
+            None,  # Acceleration (None means use default value)
+            None,  # Speed (None means use default value)
+            False
+        )
 
     def payload_setter_callback(self, msg: Float32) -> None:
         payload = msg.data

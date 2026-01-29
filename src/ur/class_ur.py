@@ -349,9 +349,9 @@ class UR:
         return send_string
     
     def set_payload_weight(self, weight: float) -> None:
-        command = 'def set_payload():\n' +\
-                  f'    set_payload_mass({weight})\n' +\
-                  'end\n'
+        command =  'def set_payload():\n' +\
+                  f'    set_payload({weight}, [0,0,0])\n' +\
+                   'end\n'
         self.send_line(command)
 
 
@@ -588,6 +588,7 @@ class UR:
         return joints_is_reached
 
     def send_line(self, _str):
+        print(_str)
         self.stopping_timer = None
         if type(_str) is str:
             self.socket.send(_str.encode())

@@ -13,6 +13,11 @@ class URNode(Node):
         super().__init__('ur_node')
         self.get_logger().info('ur_node has started!')
 
+        # Collision safety parameters
+        self.declare_parameter('collision_topic', '/collision_monitor/collision')
+        self.declare_parameter('recovery_topic', '/collision_safety/recovery')
+        self.declare_parameter('collision_safety_enabled', False)
+
         self.ros2_publishers = Ros2Publishers(self)
 
         self.ur = UR(self, ip=self.get_ip())

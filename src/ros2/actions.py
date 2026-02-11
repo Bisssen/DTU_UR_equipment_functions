@@ -24,9 +24,17 @@ class Ros2Actions():
         )
 
     def execute_callback(self, goal_handle: ServerGoalHandle) -> any:
+        # Check collision before starting
+        if self.node.ros2_subscribers.collision_active:
+            self.node.get_logger().warn('Trajectory rejected - collision active')
+            goal_handle.abort()
+            result = FollowJointTrajectory.Result()
+            result.error_code = FollowJointTrajectory.Result.INVALID_GOAL
+            return result
+
         trajectory = goal_handle.request.trajectory
 
-        joints_list = []        
+        joints_list = []
         for point in trajectory.points:
             tmp_list = list(point.positions)
             tmp_list.append('j')
@@ -39,7 +47,7 @@ class Ros2Actions():
         self.follow_joints_list(goal_handle, joints_list)
 
         self.node.get_logger().info(f'Done with movement')
-    
+
         return FollowJointTrajectory.Result()
 
     def follow_joints_list(self, goal_handle: ServerGoalHandle, joints_list: list[float]) -> None:
@@ -58,7 +66,15 @@ class Ros2Actions():
         # self.node.ros2_timers.timer_main_loop_blocking(joints_list[-1][:6])
         while not self.node.ur.check_if_joints_is_reached(joints_list[-1][:6]):
             self.node.ros2_timers.timer_main_loop()
-            ## Check cancelation
+
+            # Check collision during execution
+            if self.node.ros2_subscribers.collision_active:
+                self.node.get_logger().warn('Trajectory aborted - collision detected')
+                self.node.ur.stop(acc=5.0)
+                goal_handle.abort()
+                return
+
+            # Check cancelation
             if self.check_if_canceled(goal_handle):
                 return
 

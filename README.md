@@ -27,6 +27,29 @@ entry_points={
     ],
 ```
 
+### Collision safety
+An opt-in safety feature that stops the robot on collision detection, blocks all movement commands, and resumes normal operation on a recovery signal.
+
+Enable it by setting the `collision_safety_enabled` parameter to `True`:
+```bash
+ros2 run ur_socket_connection ur_node --ros-args -p collision_safety_enabled:=True
+```
+
+**Parameters:**
+| Parameter | Default | Description |
+|---|---|---|
+| `collision_safety_enabled` | `False` | Master enable/disable switch |
+| `collision_topic` | `/collision_monitor/collision` | Subscribed topic (`std_msgs/Bool`) that triggers a collision stop |
+| `recovery_topic` | `/collision_safety/recovery` | Subscribed topic (`std_msgs/Bool`) that clears the collision state |
+
+**Published topics:**
+| Topic | Type | Description |
+|---|---|---|
+| `/collision_safety/active` | `std_msgs/Bool` | Current collision state |
+| `/collision_safety/joints` | `sensor_msgs/JointState` | Joint positions at the moment of collision |
+
+An external collision monitor node must publish `True` on the collision topic to trigger a stop. To recover, publish `True` on the recovery topic.
+
 ## UR robots
 The **UR** class contains all the functionality needed to control the robot arm. Create a UR object of the class and use this object to communicate with the robot.
 

@@ -5,7 +5,6 @@ from std_msgs.msg import Bool
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .node import URNode
-from ..utils import euler_to_quaternion
 
 
 class Ros2Publishers():
@@ -23,6 +22,12 @@ class Ros2Publishers():
         # self.ur_joints_velocity_publisher = self.node.create_publisher(JointState, 'ur_joints_velocity', 10)
 
         self.is_ur_moving_publisher = self.node.create_publisher(Bool, 'is_ur_moving', 10)
+
+        # Collision safety status publisher
+        self.collision_status_pub = self.node.create_publisher(Bool, '/collision_safety/active', 10)
+
+        # Collision joints publisher - publishes joint state when collision is detected
+        self.collision_joints_pub = self.node.create_publisher(JointState, '/collision_safety/joints', 10)
 
         # Store last valid joint positions for jump detection
         self.last_valid_joints: list[float] | None = None
@@ -82,6 +87,57 @@ class Ros2Publishers():
         msg.data = is_moving
         self.is_ur_moving_publisher.publish(msg)
 
+    def publish_collision_status(self, collision_active: bool) -> None:
+        '''
+        Publish current collision safety status.
+        '''
+        msg = Bool()
+        msg.data = collision_active
+        self.collision_status_pub.publish(msg)
+
+    def publish_collision_joints(self, joints: list[float]) -> None:
+        '''
+        Publish joint state when collision is detected.
+        Uses last valid joints as fallback if current read is invalid.
+        '''
+        if not self.validate_list_size(joints, 6):
+            # Fall back to last valid joints if available
+            if self.last_valid_joints is not None:
+                joints = self.last_valid_joints
+                self.node.get_logger().warn(
+                    'Using last valid joints for collision state (invalid size)'
+                )
+            else:
+                self.node.get_logger().error(
+                    'Cannot publish collision joints: invalid size and no fallback'
+                )
+                return
+
+        # Validate that joint data is not all zeros or invalid
+        elif not self.validate_joint_data(joints):
+            # Fall back to last valid joints if available
+            if self.last_valid_joints is not None:
+                joints = self.last_valid_joints
+                self.node.get_logger().warn(
+                    'Using last valid joints for collision state (invalid data)'
+                )
+            else:
+                self.node.get_logger().error(
+                    'Cannot publish collision joints: invalid data and no fallback'
+                )
+                return
+
+        msg = JointState()
+        msg.header.stamp = self.node.get_clock().now().to_msg()
+        msg.name = ['shoulder_pan_joint',
+                    'shoulder_lift_joint',
+                    'elbow_joint',
+                    'wrist_1_joint',
+                    'wrist_2_joint',
+                    'wrist_3_joint']
+        msg.position = joints
+        self.collision_joints_pub.publish(msg)
+
     def validate_list_size(self, _list: list[float], size=6) -> bool:
         if not len(_list) == size:
             self.node.get_logger().error(
@@ -101,7 +157,7 @@ class Ros2Publishers():
         """
         # Check if all joints are exactly zero (socket read failure indicator)
         if all(abs(joint) < 1e-6 for joint in joints_list):
-            self.node.get_logger().warning(
+            self.node.get_logger().debug(
                 'Skipping joint state publish: all joints are zero (possible socket read failure)',
                 throttle_duration_sec=1.0  # Only log once per second
             )
@@ -109,7 +165,7 @@ class Ros2Publishers():
 
         # Check for NaN or infinity values
         if any(not (-10 < joint < 10) for joint in joints_list):
-            self.node.get_logger().warning(
+            self.node.get_logger().debug(
                 f'Skipping joint state publish: invalid joint values detected: {joints_list}',
                 throttle_duration_sec=1.0
             )
@@ -119,7 +175,7 @@ class Ros2Publishers():
         if self.last_valid_joints is not None:
             max_delta = max(abs(joints_list[i] - self.last_valid_joints[i]) for i in range(6))
             if max_delta > self.MAX_JOINT_DELTA:
-                self.node.get_logger().warning(
+                self.node.get_logger().debug(
                     f'Skipping joint state publish: detected jump of {max_delta:.4f} rad (corrupted data)',
                     throttle_duration_sec=1.0
                 )

@@ -50,6 +50,39 @@ ros2 run ur_socket_connection ur_node --ros-args -p collision_safety_enabled:=Tr
 
 An external collision monitor node must publish `True` on the collision topic to trigger a stop. To recover, publish `True` on the recovery topic.
 
+### Buffered trajectory execution
+When streaming joint configurations to `set_ur_joints` at high frequency (e.g. from a planner publishing one configuration per message), the robot executes each as an individual `movej` command. This causes a full accelerate/decelerate cycle per waypoint, resulting in jerky, slow motion.
+
+Buffered trajectory execution solves this by collecting incoming joint configurations into a buffer and periodically sending them as a single batched `path()` call with blending radius between intermediate waypoints. Within each batch the robot moves smoothly without stopping at each waypoint.
+
+**How it works:**
+1. The `set_ur_joints` callback appends each joint configuration to a thread-safe buffer instead of sending it immediately.
+2. A timer (default 10Hz) periodically checks if the previous batch has finished executing.
+3. Once the robot reaches the last waypoint of the previous batch, the timer drains the buffer and sends all accumulated waypoints as a single URScript `def` block with `movej` commands and blending radius `r`.
+4. Waypoints keep accumulating in the buffer while the robot executes, so the next batch is ready as soon as the current one finishes.
+
+Enable it by setting `buffered_trajectory_enabled` to `True`:
+```bash
+ros2 run ur_socket_connection ur_node --ros-args -p buffered_trajectory_enabled:=True
+```
+
+**Parameters:**
+| Parameter | Default | Description |
+|---|---|---|
+| `buffered_trajectory_enabled` | `False` | Enable/disable buffered execution |
+| `buffer_flush_interval` | `0.1` | Seconds between flush attempts (0.1 = 10Hz) |
+| `buffer_min_batch_size` | `2` | Minimum waypoints before flushing (blending needs at least 2) |
+| `buffer_max_batch_size` | `50` | Maximum waypoints per batch |
+| `buffer_max_age` | `0.2` | Force flush if oldest waypoint has waited this long (seconds) |
+| `buffer_blend_radius` | `0.05` | Blending radius `r` (meters) for intermediate waypoints |
+
+**Collision safety integration:** When a collision is detected, the buffer is immediately cleared and new waypoints are rejected until a recovery signal is received.
+
+**Tuning tips:**
+- Increase `buffer_flush_interval` to collect larger batches (smoother but higher latency).
+- Increase `buffer_blend_radius` for more aggressive blending between waypoints.
+- Adjust `buffer_max_batch_size` based on how many waypoints your planner produces per batch window.
+
 ## UR robots
 The **UR** class contains all the functionality needed to control the robot arm. Create a UR object of the class and use this object to communicate with the robot.
 

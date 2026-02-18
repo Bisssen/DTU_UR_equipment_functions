@@ -18,6 +18,16 @@ class Ros2Timers():
         # self.pose_publish_timer = self.node.create_timer(self.timer_frequency, self.publish_ur_data)
 
         self.main_loop_timer = self.node.create_timer(self.timer_frequency, self.timer_main_loop)
+
+        # Buffer executor timer (only if buffering is enabled)
+        if self.node.trajectory_buffer is not None:
+            buffer_interval = self.node.trajectory_buffer.flush_interval
+            self.buffer_executor_timer = self.node.create_timer(
+                buffer_interval, self.timer_buffer_executor
+            )
+            self.node.get_logger().info(
+                f'UR: Buffer executor timer started at {1/buffer_interval:.0f}Hz'
+            )
     
 
     def publish_ur_data(self) -> None:
@@ -37,6 +47,11 @@ class Ros2Timers():
         #     self.node.ur.is_moving()
         # )
     
+    def timer_buffer_executor(self) -> None:
+        """Periodically flush the trajectory buffer."""
+        if self.node.trajectory_buffer is not None:
+            self.node.trajectory_buffer.try_flush()
+
     def timer_main_loop(self) -> None:
         # Make sure to read data from the UR
         self.node.ur.communication_thread.receive()

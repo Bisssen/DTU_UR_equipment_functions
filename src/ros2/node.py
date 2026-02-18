@@ -5,6 +5,7 @@ from .actions import Ros2Actions
 from .publishers import Ros2Publishers
 from .services import Ros2Services
 from .subscribers import Ros2Subscribers
+from .trajectory_buffer import TrajectoryBuffer
 import ipaddress
 
 
@@ -18,9 +19,31 @@ class URNode(Node):
         self.declare_parameter('recovery_topic', '/collision_safety/recovery')
         self.declare_parameter('collision_safety_enabled', False)
 
+        # Buffered trajectory parameters
+        self.declare_parameter('buffered_trajectory_enabled', False)
+        self.declare_parameter('buffer_flush_interval', 0.1)
+        self.declare_parameter('buffer_min_batch_size', 2)
+        self.declare_parameter('buffer_max_batch_size', 50)
+        self.declare_parameter('buffer_max_age', 0.2)
+        self.declare_parameter('buffer_blend_radius', 0.05)
+
         self.ros2_publishers = Ros2Publishers(self)
 
         self.ur = UR(self, ip=self.get_ip())
+
+        # Create trajectory buffer if enabled (must be after self.ur, before timers/subscribers)
+        if self.get_parameter('buffered_trajectory_enabled').value:
+            self.trajectory_buffer = TrajectoryBuffer(
+                ur=self.ur,
+                flush_interval=self.get_parameter('buffer_flush_interval').value,
+                min_batch_size=self.get_parameter('buffer_min_batch_size').value,
+                max_batch_size=self.get_parameter('buffer_max_batch_size').value,
+                max_buffer_age=self.get_parameter('buffer_max_age').value,
+                blend_radius=self.get_parameter('buffer_blend_radius').value,
+            )
+            self.get_logger().info('Buffered trajectory execution enabled')
+        else:
+            self.trajectory_buffer = None
 
         self.ros2_timers = Ros2Timers(self)
 

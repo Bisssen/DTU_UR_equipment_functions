@@ -117,15 +117,18 @@ class Ros2Subscribers():
 
         self.node.get_logger().info(f'Received joint command to position: {list(msg.position)} from position {self.node.ur.get_joints()}')
 
-        # Execute the path with the formatted joints list
-        self.node.ur.path(
-            [joints_list],  # Wrap in list as path expects a list of waypoints
-            False,
-            False,
-            None,  # Acceleration (None means use default value)
-            None,  # Speed (None means use default value)
-            False
-        )
+        # If buffering is enabled, append to buffer; otherwise execute immediately
+        if self.node.trajectory_buffer is not None:
+            self.node.trajectory_buffer.append(joints_list)
+        else:
+            self.node.ur.path(
+                [joints_list],
+                False,
+                False,
+                None,
+                None,
+                False
+            )
 
     def payload_setter_callback(self, msg: Float32) -> None:
         payload = msg.data
@@ -139,6 +142,8 @@ class Ros2Subscribers():
         if msg.data and not self.collision_active:
             self.node.get_logger().warn('COLLISION DETECTED - Stopping robot')
             self.collision_active = True
+            if self.node.trajectory_buffer is not None:
+                self.node.trajectory_buffer.clear()
             self.node.ur.stop(acc=5.0)  # Emergency stop
             self.node.ros2_publishers.publish_collision_status(self.collision_active)
             # Publish the joint state after stopping
@@ -152,4 +157,6 @@ class Ros2Subscribers():
         if msg.data and self.collision_active:
             self.node.get_logger().info('RECOVERY - Resuming normal operation')
             self.collision_active = False
+            if self.node.trajectory_buffer is not None:
+                self.node.trajectory_buffer.resume()
             self.node.ros2_publishers.publish_collision_status(self.collision_active)

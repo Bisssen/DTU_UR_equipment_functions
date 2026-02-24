@@ -1,5 +1,6 @@
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Bool
+from terrain_hopper_teleop.msg import ArmFeedback
 
 
 from typing import TYPE_CHECKING
@@ -28,6 +29,9 @@ class Ros2Publishers():
 
         # Collision joints publisher - publishes joint state when collision is detected
         self.collision_joints_pub = self.node.create_publisher(JointState, '/collision_safety/joints', 10)
+
+        # ArmFeedback publisher
+        self.arm_feedback_pub = self.node.create_publisher(ArmFeedback, '/real/arm/feedback', 10)
 
         # Store last valid joint positions for jump detection
         self.last_valid_joints: list[float] | None = None
@@ -137,6 +141,34 @@ class Ros2Publishers():
                     'wrist_3_joint']
         msg.position = joints
         self.collision_joints_pub.publish(msg)
+
+    def publish_arm_feedback(
+        self,
+        joints: list[float],
+        last_tick_applied: int,
+        collision: bool,
+        distance: float,
+    ) -> None:
+        '''
+        Publish ArmFeedback with current joint state and the tick of the
+        waypoint the arm is currently moving toward.
+        '''
+        if not self.validate_list_size(joints, 6):
+            return
+        if not self.validate_joint_data(joints):
+            return
+
+        msg = ArmFeedback()
+        msg.joints.header.stamp = self.node.get_clock().now().to_msg()
+        msg.joints.name = [
+            'shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint',
+            'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint',
+        ]
+        msg.joints.position = joints
+        msg.last_tick_applied = last_tick_applied
+        msg.collision = collision
+        msg.distance = float(distance)
+        self.arm_feedback_pub.publish(msg)
 
     def validate_list_size(self, _list: list[float], size=6) -> bool:
         if not len(_list) == size:

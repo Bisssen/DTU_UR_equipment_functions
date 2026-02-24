@@ -26,6 +26,7 @@ class URNode(Node):
         self.declare_parameter('buffer_max_batch_size', 50)
         self.declare_parameter('buffer_max_age', 0.2)
         self.declare_parameter('buffer_blend_radius', 0.05)
+        self.declare_parameter('buffer_check_tolerance', 0.01)
 
         self.ros2_publishers = Ros2Publishers(self)
 
@@ -40,6 +41,8 @@ class URNode(Node):
                 max_batch_size=self.get_parameter('buffer_max_batch_size').value,
                 max_buffer_age=self.get_parameter('buffer_max_age').value,
                 blend_radius=self.get_parameter('buffer_blend_radius').value,
+                check_tolerance=self.get_parameter('buffer_check_tolerance').value,
+                logger=self.get_logger(),
             )
             self.get_logger().info('Buffered trajectory execution enabled')
         else:

@@ -1,7 +1,8 @@
 from geometry_msgs.msg import Pose
 from sensor_msgs.msg import JointState
-from std_msgs.msg import Float32, Bool
+from std_msgs.msg import Float32, Float64, Bool
 from rclpy.callback_groups import ReentrantCallbackGroup
+from terrain_hopper_teleop.msg import ArmCmd
 
 from ..utils import quaternion_to_euler
 from typing import TYPE_CHECKING
@@ -15,6 +16,9 @@ class Ros2Subscribers():
 
         # Collision safety state
         self.collision_active = False
+
+        # Latest distance from collision monitor
+        self.latest_distance: float = 0.0
 
         # Separate callback group for collision safety (ensures not blocked by other ops)
         self.collision_callback_group = ReentrantCallbackGroup()
@@ -41,6 +45,22 @@ class Ros2Subscribers():
                 JointState,
                 'set_ur_joints',
                 self.joints_command_callback,
+                10
+            )
+
+        self.arm_cmd_subscriber =\
+            self.node.create_subscription(
+                ArmCmd,
+                '/real/arm/control',
+                self.arm_cmd_callback,
+                10
+            )
+
+        self.distance_subscriber =\
+            self.node.create_subscription(
+                Float64,
+                '/collision_monitor/distance',
+                self.distance_callback,
                 10
             )
 
@@ -129,6 +149,30 @@ class Ros2Subscribers():
                 None,
                 False
             )
+
+    def arm_cmd_callback(self, msg: ArmCmd) -> None:
+        '''
+        Receive a joint configuration with an associated tick_id and append
+        it to the trajectory buffer for buffered execution.
+        '''
+        if self.collision_active:
+            self.node.get_logger().warn('ArmCmd rejected - collision active')
+            return
+
+        if self.node.trajectory_buffer is None:
+            self.node.get_logger().warn(
+                'ArmCmd received but buffered_trajectory_enabled is False - dropping command'
+            )
+            return
+
+        joints_list = list(msg.joints.position)
+        joints_list.append('j')
+        joints_list.append(None)  # legacy placeholder, not used by path()
+        self.node.trajectory_buffer.append(joints_list, tick_id=msg.tick_id)
+
+    def distance_callback(self, msg: Float64) -> None:
+        '''Update latest distance measurement from collision monitor.'''
+        self.latest_distance = float(msg.data)
 
     def payload_setter_callback(self, msg: Float32) -> None:
         payload = msg.data

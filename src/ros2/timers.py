@@ -19,21 +19,15 @@ class Ros2Timers():
 
         self.main_loop_timer = self.node.create_timer(self.timer_frequency, self.timer_main_loop)
 
-        # Buffer executor timer (only if buffering is enabled)
         if self.node.trajectory_buffer is not None:
-            buffer_interval = self.node.trajectory_buffer.flush_interval
-            self.buffer_executor_timer = self.node.create_timer(
-                buffer_interval, self.timer_buffer_executor
-            )
             self.node.get_logger().info(
-                f'UR: Buffer executor timer started at {1/buffer_interval:.0f}Hz'
+                'UR: Trajectory buffer flush running at 200Hz inside main loop'
             )
     
 
-    def publish_ur_data(self) -> None:
+    def publish_ur_data(self, joints: list[float]) -> None:
         pose = self.node.ur.get_pose()
         pose_velocity = self.node.ur.get_pose_velocity(read=False)
-        joints = self.node.ur.get_joints(read=False)
         joints_velocity = self.node.ur.get_joints_velocity(read=False)
 
         self.node.ros2_publishers.publish_ur_pose(pose, pose_velocity)
@@ -46,18 +40,30 @@ class Ros2Timers():
         # self.node.ros2_publishers.publish_is_ur_moving(
         #     self.node.ur.is_moving()
         # )
-    
-    def timer_buffer_executor(self) -> None:
-        """Periodically flush the trajectory buffer."""
-        if self.node.trajectory_buffer is not None:
-            self.node.trajectory_buffer.try_flush()
 
     def timer_main_loop(self) -> None:
         # Make sure to read data from the UR
         self.node.ur.communication_thread.receive()
 
+        joints = self.node.ur.get_joints(read=False)
+
         # Publish UR data
-        self.publish_ur_data()
+        self.publish_ur_data(joints)
+
+        if self.node.trajectory_buffer is not None:
+            # Flush/completion-check at 200 Hz — minimises inter-batch gap
+            self.node.trajectory_buffer.try_flush()
+
+            # Update tick and publish arm feedback at 200 Hz
+            self.node.trajectory_buffer.update_current_tick()
+            tick = self.node.trajectory_buffer.current_tick
+            if tick is not None:
+                self.node.ros2_publishers.publish_arm_feedback(
+                    joints,
+                    tick,
+                    self.node.ros2_subscribers.collision_active,
+                    self.node.ros2_subscribers.latest_distance,
+                )
 
     
     def timer_main_loop_blocking(self, desired_joints: list[float]) -> None:

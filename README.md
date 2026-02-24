@@ -83,6 +83,44 @@ ros2 run ur_socket_connection ur_node --ros-args -p buffered_trajectory_enabled:
 - Increase `buffer_blend_radius` for more aggressive blending between waypoints.
 - Adjust `buffer_max_batch_size` based on how many waypoints your planner produces per batch window.
 
+### Arm command interface with tick tracking
+An alternative command interface (`arm_cmd`) accepts joint configurations tagged with a monotonically increasing `tick_id`, enabling the caller to know precisely which configuration the arm is currently executing toward.
+
+**Message types** (from `terrain_hopper_teleop`):
+- `ArmCmd` — `sensor_msgs/JointState joints` + `uint32 tick_id`
+- `ArmFeedback` — `sensor_msgs/JointState joints` + `uint32 last_tick_applied` + `bool collision` + `float32 distance`
+
+**How it works:**
+1. Publish joint configurations to `arm_cmd`. Each message carries a `tick_id` that identifies that configuration (e.g. 1, 2, 3 … 20 for a sequence of 20 waypoints). Commands are appended to the trajectory buffer — buffered execution **must** be enabled.
+2. The buffer executor (10Hz) monitors the currently executing batch. While the robot is in motion, it projects the current joint state onto the segment between each consecutive pair of waypoints to determine which segment is active.
+3. If the current joints fall between waypoint N and waypoint N+1, `last_tick_applied` is set to the tick of waypoint N+1 — the target of the active segment.
+4. `ArmFeedback` is published at buffer-executor frequency (default 10Hz) while a tick-tagged batch is executing.
+
+**Subscribed topics:**
+| Topic | Type | Description |
+|---|---|---|
+| `arm_cmd` | `terrain_hopper_teleop/ArmCmd` | Joint configuration + tick_id, appended to trajectory buffer |
+| `/collision_monitor/distance` | `std_msgs/Float64` | Latest distance to obstacle, forwarded into ArmFeedback |
+
+**Published topics:**
+| Topic | Type | Description |
+|---|---|---|
+| `arm_feedback` | `terrain_hopper_teleop/ArmFeedback` | Current joints, last tick being executed toward, collision flag, and distance |
+
+**Requirements:**
+- `buffered_trajectory_enabled` must be `True` — commands are silently dropped otherwise.
+- `tick_id` values do not need to be contiguous, but should increase monotonically within a trajectory so the feedback is meaningful.
+
+**Example:** publishing a 5-waypoint sequence and monitoring feedback:
+```bash
+# Enable buffered execution
+ros2 run ur_socket_connection ur_node --ros-args -p buffered_trajectory_enabled:=True
+
+# Monitor feedback
+ros2 topic echo /arm_feedback
+```
+While the robot moves from waypoint 2 to waypoint 3, `arm_feedback.last_tick_applied` will read `3`.
+
 ## UR robots
 The **UR** class contains all the functionality needed to control the robot arm. Create a UR object of the class and use this object to communicate with the robot.
 

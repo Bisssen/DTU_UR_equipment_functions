@@ -17,6 +17,9 @@ class Ros2Subscribers():
         # Collision safety state
         self.collision_active = False
 
+        # Last tick_id received from ArmCmd (updated even when collision rejects the command)
+        self.last_received_tick: int | None = None
+
         # Latest distance from collision monitor
         self.latest_distance: float = 0.0
 
@@ -155,6 +158,8 @@ class Ros2Subscribers():
         Receive a joint configuration with an associated tick_id and append
         it to the trajectory buffer for buffered execution.
         '''
+        self.last_received_tick = msg.tick_id
+
         if self.collision_active:
             self.node.get_logger().warn('ArmCmd rejected - collision active')
             return

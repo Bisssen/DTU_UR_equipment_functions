@@ -19,6 +19,8 @@ class Ros2Timers():
 
         self.main_loop_timer = self.node.create_timer(self.timer_frequency, self.timer_main_loop)
 
+        self._last_known_tick: int | None = None
+
         if self.node.trajectory_buffer is not None:
             self.node.get_logger().info(
                 'UR: Trajectory buffer flush running at 200Hz inside main loop'
@@ -58,10 +60,18 @@ class Ros2Timers():
             self.node.trajectory_buffer.update_current_tick()
             tick = self.node.trajectory_buffer.current_tick
             if tick is not None:
+                self._last_known_tick = tick
+
+            collision_active = self.node.ros2_subscribers.collision_active
+            if collision_active:
+                publish_tick = self.node.ros2_subscribers.last_received_tick
+            else:
+                publish_tick = tick if tick is not None else self._last_known_tick
+            if publish_tick is not None or collision_active:
                 self.node.ros2_publishers.publish_arm_feedback(
                     joints,
-                    tick,
-                    self.node.ros2_subscribers.collision_active,
+                    publish_tick if publish_tick is not None else 0,
+                    collision_active,
                     self.node.ros2_subscribers.latest_distance,
                 )
 

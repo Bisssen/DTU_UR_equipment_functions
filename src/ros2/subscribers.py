@@ -1,8 +1,12 @@
+import time
+
 from geometry_msgs.msg import Pose
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float32, Float64, Bool
 from rclpy.callback_groups import ReentrantCallbackGroup
 from terrain_hopper_teleop.msg import ArmCmd
+from rclpy.qos import QoSProfile, ReliabilityPolicy
+
 
 from ..utils import quaternion_to_euler
 from typing import TYPE_CHECKING
@@ -25,6 +29,8 @@ class Ros2Subscribers():
 
         # Separate callback group for collision safety (ensures not blocked by other ops)
         self.collision_callback_group = ReentrantCallbackGroup()
+        
+        qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
 
         # Change to service
         self.payload_setter_subscriber =\
@@ -50,6 +56,24 @@ class Ros2Subscribers():
                 self.joints_command_callback,
                 10
             )
+            
+            
+        self.pose_speed_command_subscriber =\
+            self.node.create_subscription(
+                Pose,
+                'set_ur_pose_speed',
+                self.pose_speed_command_callback,
+                qos
+            )
+
+        self.joints_speed_command_subscriber =\
+            self.node.create_subscription(
+                JointState,
+                'set_ur_joints_speed',
+                self.joints_speed_command_callback,
+                10
+            )
+
 
         self.arm_cmd_subscriber =\
             self.node.create_subscription(
@@ -96,6 +120,8 @@ class Ros2Subscribers():
             self.collision_subscriber = None
             self.recovery_subscriber = None
             self.node.get_logger().info('Collision safety disabled')
+        
+        self.received_count = 0
 
     def pose_command_callback(self, msg: Pose) -> None:
         '''
@@ -152,6 +178,62 @@ class Ros2Subscribers():
                 None,
                 False
             )
+
+    def pose_speed_command_callback(self, msg: Pose) -> None:
+        '''
+        Send the robot to a specific position with speed control.
+        The speed is determined by the distance to the target pose.
+        '''
+        self.received_count += 1
+        self.node.get_logger().info(f'Received pose speed command #{self.received_count}')
+
+        
+        time_start = time.time()
+        if self.collision_active and False:
+            self.node.get_logger().warn('Pose speed command rejected - collision active')
+            return
+    
+        self.node.get_logger().info(f'Received pose speed command to position: ({msg.position.x}, {msg.position.y}, {msg.position.z}) from position {self.node.ur.get_pose()}')
+
+        wrist_angles = quaternion_to_euler(
+            msg.orientation.x,
+            msg.orientation.y,
+            msg.orientation.z,
+            msg.orientation.w
+            )
+
+        self.node.ur.speed(
+            msg.position.x,
+            msg.position.y,
+            msg.position.z,
+            wrist_angles[0],
+            wrist_angles[1],
+            wrist_angles[2],
+            mode='linear',
+            transform=False,
+            wait=False
+        )
+        
+        self.node.get_logger().info(f'Pose speed command processing time: {time.time() - time_start:.4f} seconds')
+    
+    def joints_speed_command_callback(self, msg: JointState) -> None:
+        '''
+        Send the ur to a specific joints state with speed control.
+        The speed is determined by the distance to the target joints state.
+        '''
+        if self.collision_active:
+            self.node.get_logger().warn('Joints speed command rejected - collision active')
+            return
+
+
+        self.node.get_logger().info(f'Received joint speed command to position: {list(msg.position)} from position {self.node.ur.get_joints()}')
+
+        self.node.ur.speed(
+            *msg.position,
+            mode='joint',
+            wait=False,
+            transform=False
+        )
 
     def arm_cmd_callback(self, msg: ArmCmd) -> None:
         '''

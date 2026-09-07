@@ -354,6 +354,28 @@ class UR:
                    'end\n'
         self.send_line(command)
 
+    # Turns the digital_out on or off (True = on / False = off)
+    def set_digital_out(
+            self,
+            state: bool=False,
+            digital_out_number: int=8) -> None:
+        # Make sure the state given is a bool
+        if not type(state) == bool:
+            raise NameError("\"state\" must be of type bool. \"state\" was: " +
+                            str(state))
+            return
+        # Make sure the number input given is an int
+        if not type(digital_out_number) == int:
+            raise NameError("\"digital_out_number\" must be of type int."
+                            " \"digital_out_number\" was: " +
+                            str(digital_out_number))
+            return
+        # Send the command to the socket
+        temp = ("set_digital_out(" + str(digital_out_number) + "," +
+                str(state) + ")\n")
+        self.send_line(temp)
+        # The arm NEEDS a sleep to not skip the command
+        time.sleep(0.2)
 
     def move_tool(self, x=0, y=0, z=0, rx=0, ry=0, rz=0, acc=1, speed=0.1,
                   wait=False):

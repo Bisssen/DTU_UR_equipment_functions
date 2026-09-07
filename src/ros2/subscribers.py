@@ -1,6 +1,6 @@
 from geometry_msgs.msg import Pose
 from sensor_msgs.msg import JointState
-from std_msgs.msg import Float32
+from std_msgs.msg import Float32, Int32MultiArray
 
 from ..utils import quaternion_to_euler
 from typing import TYPE_CHECKING
@@ -37,6 +37,14 @@ class Ros2Subscribers():
                 10
             )
 
+        self.digital_out_subscriber =\
+        self.node.create_subscription(
+            Int32MultiArray,
+            'set_digital_out',
+            self.set_digital_out_callback,
+            10
+        )
+
     def pose_command_callback(self, msg: Pose) -> None:
         '''
         Send the robot to a specific position.
@@ -68,3 +76,26 @@ class Ros2Subscribers():
     def payload_setter_callback(self, msg: Float32) -> None:
         payload = msg.data
         self.node.ur.set_payload_weight(payload)
+
+    def set_digital_out(self, msg: Int32MultiArray) -> None:
+        # TODO test that this works
+        _bool = msg.data[0]
+        digital_number = msg.data[1]
+
+        if _bool not in [0, 1]:
+            self.node.get_logger().warn(
+                f"Invalid data[0] value: {_bool}, expected 0 or 1"
+            )
+            return
+
+        # TODO verify that these are the correct numbers
+        if digital_number not in [8, 9]:
+            self.node.get_logger().warn(
+                f"Invalid data[1] value: {digital_number}, expected 0 or 1"
+            )
+            return
+
+        self.node.ur.set_digital_out(
+            bool=_bool,
+            digital_out_number=digital_number
+        )
